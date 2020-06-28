@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "hhhhh"
+title:  "volatile关键字"
 ---
 
 在Java多线程并发编程中，volatile关键词扮演着重要角色，它是轻量级的synchronized，在多处理器开发中保证了共享变量的**“可见性”**。“可见性”的意思是当一个线程修改一个共享变量时，另外一个线程能读到这个修改的值。如果一个字段被声明为volatile，Java线程内存模型确保所有线程看到这个变量的值是一致的。与synchronized不同，volatile变量不会引起线程上下文的切换和调度，在适合的场景下拥有更低的执行成本和更高的效率。
