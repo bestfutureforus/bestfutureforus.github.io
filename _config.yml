@@ -66,7 +66,11 @@ autopages:
       cased: true
 
 # Build settings
+<<<<<<< HEAD
 markdown: kramdown
+=======
+theme: jekyll-theme-leap-day
+>>>>>>> 22e947fd82b7ced6050802a92eb754a9156d9068
 plugins:
   - jekyll-paginate-v2
   - jekyll-sitemap
