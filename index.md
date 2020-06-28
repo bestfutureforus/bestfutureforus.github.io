@@ -1,1 +1,3 @@
-hahaha
+---
+layout: home
+---
