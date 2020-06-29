@@ -1,0 +1,137 @@
+---
+layout:     post
+title:      "MyBatis学习笔记(4)——使用Mapper代理方法开发Dao"
+subtitle:   ""
+date:       2017-03-23 12:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 框架
+---
+
+## 思路
+Mapper接口开发方法**只需要程序员编写Mapper接口**（相当于Dao接口），由MyBatis框架根据接口定义创建接口的动态代理对象，代理对象的方法体同上边Dao接口实现类方法。
+Mapper接口开发需要遵循以下规范：
+1. Mapper.xml文件中的namespace与mapper接口的类路径相同
+
+```xml
+<!--namespace命名空间，作用就是对sql进行分类化管理，理解sql隔离
+注意：使用mapper代理方法开发，namespace有着特殊重要的作用
+-->
+<mapper namespace="com.crow.mapper.UserMapper">
+```
+2. Mapper接口方法名和Mapper.xml中定义的每个statement的id相同 
+3. Mapper接口方法的输入参数类型和mapper.xml中定义的每个sql 的parameterType的类型相同
+4. Mapper接口方法的输出参数类型和mapper.xml中定义的每个sql的resultType的类型相同
+
+```xml
+<select id="findUserById" parameterType="int" resultType="com.crow.po.User">
+        SELECT * FROM USER WHERE id = #{id}
+</select>
+```
+
+```java
+//根据id查询用户信息
+public User findUserById(int id) throws Exception;
+```
+
+**总结:**
+以上开发规范主要是对下边的代码进行统一生成：
+```java
+User user = sqlSession.selectOne("test.findUserById", id);
+sqlSession.insert("test.insertUser", user);
+```
+
+## 实现代码
+
+### UserMapper.java(接口文件)
+
+```java
+Public interface UserMapper {
+	//根据用户id查询用户信息
+	public User findUserById(int id) throws Exception;
+	//查询用户列表
+	public List<User> findUserByUsername(String username) throws Exception;
+	//添加用户信息
+	public void insertUser(User user)throws Exception; 
+}
+```
+接口定义有如下特点：
+1. Mapper接口方法名和Mapper.xml中定义的statement的id相同
+2. Mapper接口方法的输入参数类型和mapper.xml中定义的statement的parameterType的类型相同
+3. Mapper接口方法的输出参数类型和mapper.xml中定义的statement的resultType的类型相同
+
+### UserMapper.xml(映射文件)
+
+定义mapper映射文件UserMapper.xml（内容同Users.xml），需要修改namespace的值为 UserMapper接口路径。将UserMapper.xml放在classpath 下mapper目录 下。
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.crow.mapper.UserMapper">
+<!-- 根据id获取用户信息 -->
+	<select id="findUserById" parameterType="int" resultType="com.crow.po.User">
+		select * from user where id = #{id}
+	</select>
+<!-- 自定义条件查询用户列表 -->
+	<select id="findUserByUsername" parameterType="java.lang.String" 
+			resultType="com.crow.po.User">
+	   select * from user where username like '%${value}%' 
+	</select>
+<!-- 添加用户 -->
+	<insert id="insertUser" parameterType="com.crow.po.User">
+	<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+		select LAST_INSERT_ID() 
+	</selectKey>
+	  insert into user(username,birthday,sex,address) 
+	  values(#{username},#{birthday},#{sex},#{address})
+	</insert>
+
+</mapper>
+```
+
+### 在SqlMapConfig.xml中加载UserMapper.xml
+
+```xml
+<mappers>
+        <mapper resource="sqlmap/User.xml"/>
+        <mapper class="com.crow.mapper.UserMapper"/> 
+ </mappers>
+```
+
+### 测试代码
+
+以通过id查询用户为例
+```java
+@Before
+    public void setUp() throws IOException {
+        String resource = "SqlMapConfig.xml";
+        InputStream inputStream = Resources.getResourceAsStream(resource);
+        sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+    }
+    
+@Test
+    public void findUserByIdTest() throws Exception{
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        UserMapper userMapper = sqlSession.getMapper(UserMapper.class);//生成代理对象userMapper
+        User user = userMapper.findUserById(16);
+        System.out.println(user);
+    }
+```
+
+运行结果如下
+![](http://pic.yupoo.com/crowhawk/GjGkMdBh/kxGCk.jpg)
+
+## 注意
+
++ 使用Mapper代理方法开发Dao时，当使用查询操作时并未明确指明`SqlSession`是使用`selectOne`还是`selectList`，这一判断是在**代理对象内部**自动完成的。如果mapper方法返回单个pojo对象（非集合对象），代理对象内部通过selectOne查询数据库；如果mapper方法返回集合对象，代理对象内部通过selectList查询数据库。
++ mapper接口方法参数只能有一个，当**需要传入多个参数**时，可以使用**包装类型的pojo**满足不同的业务方法的需求（建议只对持久层方法的参数使用，若对业务层方法使用会影响可扩展性）。
+
+
+
+
+

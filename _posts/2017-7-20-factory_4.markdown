@@ -1,0 +1,74 @@
+---
+layout:     post
+title:      "设计模式(4)——工厂模式"
+subtitle:   ""
+date:       2017-07-20 22:00:04
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 设计模式
+    - 读书笔记
+---
+
+工厂模式主要包括**工厂方法**和**抽象工厂**，它的主要目标是把实例化这一活动从类中脱离出来，降低系统的耦合度，具体做法就是封装对象的创建。
+
+### 工厂方法
+
+工厂方法模式定义了一个创建对象的接口，但由子类决定要实例化的类是哪一个。工厂方法让类把实例化推迟到子类。
+
+直接通过实例来说明这一模式。我们模拟了一个披萨店，它需要实现Pizza类和PizzaStore类，PizzaStore类需要包含orderPizza方法。在orderPizza方法中需要对菜单中的某几种披萨进行实例化。如果直接使用new进行实例化，当我们想更新菜单时，就必须对orderPizza中的代码进行更改，很明显违背了我们**“对修改封闭”**的原则。
+为此我们声明一个**工厂方法**，原本是由一个对象负责所有具体类的实例化，现在通过对PizzaStore做一些小转变，变成由一群子类来负责实例化，从而达到将对象创建的过程封装的目的。
+```
+public abstract class PizzaStore {
+ 
+	abstract Pizza createPizza(String item);
+ 
+	public Pizza orderPizza(String type) {
+		Pizza pizza = createPizza(type);
+		System.out.println("--- Making a " + pizza.getName() + " ---");
+		pizza.prepare();
+		pizza.bake();
+		pizza.cut();
+		pizza.box();
+		return pizza;
+	}
+}
+```
+完整代码可以参考[我的Github](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Factory/src/main/java/com/crow/FactoryMethod)，项目用Maven构建，测试方法位于test目录下。
+工厂方法的类图为
+![](http://pic.yupoo.com/crowhawk/GBDJxtIk/D57jz.jpg)
+
+### 抽象工厂
+
+抽象工厂模式提供一个接口，用于创建相关或依赖对象的家族，而不需要明确指定具体类。
+
+承接工厂方法的例子，如果为了确保每家披萨加盟店都使用高质量的原料，我们需要建造一个生产原料的工厂，并将原料运送到各家加盟店。为这个创建原料的工厂定义的接口就是抽象工厂：
+```java
+public interface PizzaIngredientFactory {
+ 
+	public Dough createDough();
+	public Sauce createSauce();
+	public Cheese createCheese();
+	public Veggies[] createVeggies();
+	public Pepperoni createPepperoni();
+	public Clams createClam();
+ 
+}
+```
+不同区域的原料工厂均实现改接口，且可以根据当地的特色口味进行个性化。这样一来，原料工厂就从具体的原料中被解耦。
+
+抽象工厂的类图如下
+![](http://pic.yupoo.com/crowhawk/GBDKeLZh/vhcaa.jpg)
+完整代码请[点击此处](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Factory/src/main/java/com/crow/AbstractFactory)，项目用Maven构建，测试方法位于test目录下。
+
+工厂模式中体现了模式设计的另一项原则：**依赖倒置原则**，即**要依赖抽象，不要依赖具体类**。这个原则说明了：不能让高层组件依赖低层组件，而且不管高层或低层组件，两者都应该依赖于抽象。
+
+### 工厂方法和抽象工厂的比较
+
++ 他们都用来封装对象的创建，通过减少应用程序和具体类之间的依赖促进松耦合。
++ 工厂方法使用继承：把对象的创建委托给子类，子类实现工厂方法来创建对象。
++ 抽象工厂使用对象组合：对象的创建被是现在工厂接口所暴露出来的方法中。
++ 工厂方法允许类将实例化延迟到子类进行。
++ 抽象工厂创建相关的对象家族，而不需要依赖它们的具体类。

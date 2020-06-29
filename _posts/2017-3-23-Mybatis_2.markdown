@@ -1,0 +1,171 @@
+---
+layout:     post
+title:      "MyBatis学习笔记(2)——MyBatis入门程序"
+subtitle:   ""
+date:       2017-03-23 12:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 框架
+---
+ 
+**目标：**
++ 对于一个用户表,根据用户id（主键）查询用户信息
+
+## 部署开发环境
+
+在Intellij IDEA中新建一个项目，Java项目或JavaWeb项目都可以，导入与MyBatis相关的jar包、MySQL数据库驱动包、单元测试Junit 包等等。创建配置文件，具体如下图：
+
+![](http://pic.yupoo.com/crowhawk/GjF55D9I/136AOS.jpg)
+
+## 系统配置文件
+
+### SqlMapConfig.xml
+在classpath下创建SqlMapConfig.xml如下
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 和spring整合后 environments配置将废除-->
+	<environments default="development">
+		<environment id="development">
+		<!-- 使用jdbc事务管理-->
+			<transactionManager type="JDBC" />
+		<!-- 数据库连接池-->
+			<dataSource type="POOLED">
+				<property name="driver" value="com.mysql.jdbc.Driver" />
+				<property name="url" value="jdbc:mysql://localhost:3306/mybatis?characterEncoding=utf-8" />
+				<property name="username" value="root" />
+				<property name="password" value="wyj" />
+			</dataSource>
+		</environment>
+	</environments>
+	
+</configuration>
+```
+SqlMapConfig.xml是mybatis核心配置文件，上边文件的配置内容为数据源、事务管理。
+
+### log4j.properties
+在classpath下创建log4j.properties如下
+```profile
+# Global logging configuration
+log4j.rootLogger=DEBUG, stdout
+# Console output...
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p [%t] - %m%n
+![Alt text](./1490247057474.png)
+```
+
+## 程序代码
+
+### po类
+po类是mybatis进行sql映射使用的，po类通常与数据库表对应，即将数据库中的一张表映射为一个popo类。po类`User.java`如下：
+
+```java
+Public class User {
+	private int id;
+	private String username;// 用户姓名
+	private String sex;// 性别
+	private Date birthday;// 生日
+	private String address;// 地址
+
+	getters...
+	setters...
+
+	@Override
+    public String toString() {
+        return "User [id=" + id + ", username=" + username + ", sex=" + sex + ", birthday=" + birthday + ", address=" + address + "]";
+```
+
+### 映射文件
+
+#### Users.xml
+在classpath下的sqlmap目录下创建sql映射文件`Users.xml`。
+映射文件命名：
+`User.xml`（原始ibatis命名），mapper代理开发映射文件名称叫`XXXMapper.xml`，比如：`UserMapper.xml`、`ItemsMapper.xml`
+**在映射文件中配置sql语句。**
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace命名空间，作用就是对sql进行分类化管理，理解sql隔离
+注意：使用mapper代理方法开发，namespace有着特殊重要的作用
+-->
+<mapper namespace="test">
+    <!--
+    
+    进行模糊查找时，可能返回多条记录
+    resultType指定的是单条记录所映射的java对象类型
+    -->
+    <select id="findUserById" parameterType="int" resultType="com.crow.po.User">
+        SELECT * FROM USER WHERE id = #{id}
+    </select>
+</mapper>
+```
+
+#### SqlMapConfig.xml
+在sqlMapConfig.xml中加载User.xml:
+```xml
+<mappers>
+		<mapper resource="sqlmap/User.xml"/>
+</mappers>
+```
+
+### 测试代码
+```java
+package com.crow.mybatis;
+
+import com.crow.po.User;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.junit.Test;
+
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by CrowHawk on 17/3/15.
+ */
+public class MyBatisDemo {
+    //根据ID查询用户信息，得到一条记录结果
+    @Test
+    public void findUserByIdTest() throws IOException{
+        String resource = "SqlMapConfig.xml";
+        InputStream inputStream = Resources.getResourceAsStream(resource);//获取配置文件流
+        // 创建会话工厂，传入mybatis的配置文件信息
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+        // 通过工厂得到SqlSession
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        User user = sqlSession.selectOne("test.findUserById",1);
+        System.out.println(user);
+        sqlSession.close();
+    }
+}
+```
+使用单元测试，执行结果如下：
+![](http://pic.yupoo.com/crowhawk/GjFhekh5/5g3Nv.jpg)
+
+## 注意
+
++ MyBatis将SQL语句放在映射配置文件中，而不是放在Java代码中编写，这样有利于程序维护，本文只演示了CUID中的查询操作，在配置文件中通过`<select>`标签来实现查询功能，SQL语句和相关配置信息也写在标签体内，增、删、改则可分别通过`<insert>`、`<delete>`、`<update>`标签来完成，与查询操作类似，此处不加以赘述。
++ 对于查询操作而言，在Java测试代码中，如果查询的结果是单个的，则使用SqlSession会话提供的`selectOne`方法来调用SQL语句，如果查询的结果是多个的，则应使用`selectList`方法。且查询结果为多个时，配置文件中的`resultType`值应为单条记录所映射的Java对象类型，而不是List类型。
++ #{}表示一个占位符号，#{}接收输入参数，类型可以是简单类型，pojo、hashmap。
+如果接收简单类型，#{}中可以写成value或其它名称。
+{}接收pojo对象值，通过OGNL读取对象中的属性值，通过属性.属性.属性...的方式获取对象属性值。
+
+
+
+

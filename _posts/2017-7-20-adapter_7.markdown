@@ -1,0 +1,71 @@
+---
+layout:     post
+title:      "设计模式(7)——适配器模式"
+subtitle:   ""
+date:       2017-07-20 22:00:07
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 设计模式
+    - 读书笔记
+---
+
+**适配器（Adapter）模式**将一个类的接口，转换成客户期望的另一个接口。适配器让原本接口不兼容的类可以合作无间。
+这个模式可以让客户从实现的接口实现解耦，如果在一段时间后，我们想改变接口，适配器可以将改变的部分封装起来，客户就不必为了应对不同的接口而每次跟着修改。
+
+适配器模式的类图为
+![](https://pic.yupoo.com/crowhawk/8b182e80/43f28d50.gif)
+
+下面直接用一个具体实例来说明
+
+我们有一个鸭子接口
+```java
+public interface Duck {
+	public void quack();
+	public void fly();
+}
+```
+还有一个火鸡接口
+```java
+public interface Turkey {
+	public void gobble();
+	public void fly();
+}
+```
+现在假设我们缺鸭子对象，想用一些火鸡对象来冒充。显而易见，因为火鸡的接口不同，所以我们不能公然拿来用。这就需要写一个适配器
+```java
+import java.util.Random;
+
+public class DuckAdapter implements Turkey {//让鸭子看起来像火鸡
+	Duck duck;
+	Random rand;
+ 
+	public DuckAdapter(Duck duck) {
+		this.duck = duck;
+		rand = new Random();
+	}
+    
+	public void gobble() {
+		duck.quack();
+	}
+  
+	/*
+	虽然两个接口都具备fly()方法，但火鸡飞行距离很短，不像鸭子可以长途飞行。
+	要让鸭子的飞行和火鸡的飞行能够对应，必须连续五次调用火鸡的fly()来完成。
+	*/
+	public void fly() {
+		if (rand.nextInt(5)  == 0) {
+		     duck.fly();
+		}
+	}
+}
+```
+查看完整代码请[点击此处](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Adapter/src)
+
+适配器模式充满了良好的OO设计原则：使用对象组合，以修改的接口包装被适配者：这种做法还有额外的优点，那就是被适配的任何子类都可以搭配着适配器使用。
+此外，这个模式把客户和接口绑定起来，而不是和实现绑定起来，我们可以使用数个适配器，每一个都负责转换不同组的后台类。或者，也可以加上新的实现，只要它们遵守目标接口就可以。
+
+实际上，一共有“两种”适配器：**对象适配器**和**类适配器**，前文所描述的都是对象适配器，关于类适配器，需要多重继承才能实现它，而Java类是不支持多重继承的，因此我们不多加描述，在这里仅给出类适配器的类图：
+![](https://pic.yupoo.com/crowhawk/e919f239/1e256c3f.jpg)

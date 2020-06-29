@@ -1,0 +1,162 @@
+---
+layout:     post
+title:      "MyBatis学习笔记(5)——输入映射"
+subtitle:   ""
+date:       2017-03-23 12:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 框架
+---
+
+> 通过parameterType指定输入参数的类型，类型可以是简单类型、hashmap、**pojo的包装类型**。前面的文章中parameterType指定的类型都是简单类型，这里就不再赘述，本文主要介绍传递pojo对象和pojo包装对象的方法，传递hashmap的方法与其类似，亦不多加笔墨。
+
+# 传递pojo对象
+
+Mybatis使用ognl表达式解析对象字段的值，如下例子：
+
+```xml
+<!—传递pojo对象综合查询用户信息 -->
+	<select id="findUserByUser" parameterType="user" resultType="user">
+	   select * from user where id=#{id} and username like '%${username}%'
+	</select>
+```
+
+测试：
+
+```java
+Public void testFindUserByUser()throws Exception{
+		//获取session
+		SqlSession session = sqlSessionFactory.openSession();
+		//获限mapper接口实例
+		UserMapper userMapper = session.getMapper(UserMapper.class);
+		//构造查询条件user对象
+		User user = new User();
+		user.setId(1);
+		user.setUsername("管理员");
+		//传递user对象查询用户列表
+		List<User>list = userMapper.findUserByUser(user);
+		//关闭session
+		session.close();
+	}
+```
+
+**异常测试：**
+
+Sql中字段名输入错误后测试，username输入dusername测试结果报错：
+
+
+	org.apache.ibatis.exceptions.PersistenceException: 
+	### Error querying database.  Cause: org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'dusername' in 'class cn.itcast.mybatis.po.User'
+	### Cause: org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'dusername' in 'class cn.itcast.mybatis.po.User'
+
+# 传递pojo的包装对象
+
+## 需求
+完成用户信息的综合查询，需要传入查询条件很复杂（可能包括用户信息、其它信息，比如商品、订单的）。
+
+## 定义包装类型pojo
+
+针对上边需求，可以使用自定义的包装类型的pojo，在包装类型的pojo中将复杂的查询条件包装进去。
+
+```java
+public class UserQueryVo {
+    //传入多个id
+    private List<Integer> ids;
+
+
+    //在这里包装所需要的查询条件
+
+    //用户查询条件
+    private UserCustom userCustom;
+
+    public UserCustom getUserCustom() {
+        return userCustom;
+    }
+
+    public void setUserCustom(UserCustom userCustom) {
+        this.userCustom = userCustom;
+    }
+
+    public List<Integer> getIds() {
+        return ids;
+    }
+
+    public void setIds(List<Integer> ids) {
+        this.ids = ids;
+    }
+
+    //可以包装其它的查询条件，订单、商品
+    //....
+}
+```
+
+## mapper.xml
+
+在UserMapper.xml中定义用户信息综合查询（查询条件复杂，通过高级查询进行复杂关联查询）。
+
+```xml
+ <!-- 用户信息综合查询
+	#{userCustom.sex}:取出pojo包装对象中性别值
+	${userCustom.username}：取出pojo包装对象中用户名称
+	 -->
+    <select id="findUserList" parameterType="com.crow.po.UserQueryVo" resultType="com.crow.po.UserCustom">
+        SELECT * FROM USER where username=#{user.username} and sex=#{user.sex}
+    </select>
+```
+
+**说明：**mybatis底层通过ognl从pojo中获取属性值：#{user.username}，user即是传入的包装对象的属性。queryVo是别名，即上边定义的包装对象类型。
+
+## UserMapper.java
+
+```java
+//用户信息综合查询
+public List<UserCustom> findUserList(UserQueryVo userQueryVo) throws Exception;
+```
+
+## 测试代码
+
+```java
+@Before
+    public void setUp() throws IOException {
+        String resource = "SqlMapConfig.xml";
+        InputStream inputStream = Resources.getResourceAsStream(resource);
+        sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+    }
+    
+@Test
+    public void testFindUserList() throws Exception {
+
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+
+        //创建UserMapper对象，mybatis自动生成mapper代理对象
+        UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+
+        //创建包装对象，设置查询条件
+        UserQueryVo userQueryVo = new UserQueryVo();
+        UserCustom userCustom = new UserCustom();
+        //由于这里使用动态sql，如果不设置某个值，条件不会拼接在sql中
+//		userCustom.setSex("1");
+        userCustom.setUsername("小明");
+        //传入多个id
+        List<Integer> ids = new ArrayList<Integer>();
+        ids.add(1);
+        ids.add(10);
+        ids.add(16);
+        //将ids通过userQueryVo传入statement中
+        userQueryVo.setIds(ids);
+        userQueryVo.setUserCustom(userCustom);
+        //调用userMapper的方法
+
+        List<UserCustom> list = userMapper.findUserList(userQueryVo);
+
+        System.out.println(list);
+
+
+    }
+```
+
+运行结果如下：
+![](http://pic.yupoo.com/crowhawk/GjGN05lG/cPYWa.jpg)

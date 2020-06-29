@@ -1,0 +1,71 @@
+---
+layout:     post
+title:      "设计模式(1)——策略模式"
+subtitle:   ""
+date:       2017-07-20 22:00:01
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 设计模式
+    - 读书笔记
+---
+
+**策略（Strategy）模式**定义了算法族，分别封装起来，让它们之间可以互相替换，此模式让算法的变化独立于使用算法的客户。
+
+我们用一个实例来说明策略模式。我用代码模拟了鸭子的行为，包括不同品种的鸭子乃至橡皮鸭、诱饵鸭。活鸭子都会游泳戏水，会呱呱叫，会飞，但是诱饵鸭不会飞也不会叫，橡皮鸭不会飞但会叫，如果采用传统的继承方式设计程序，设计一个Duck类，在超类中加上fly()和quack()，让所有鸭子继承这个类，会导致所有的子类具备fly()和quack()，连那些不该具备的子类也无法免除。
+
+为了解决这个问题，先用到第一个设计原则：**封装变化**。即找出应用中可能需要变化之处，把它们独立出来，不要和那些不需要变化的代码混在一起。这几乎是每个设计模式背后的精神所在。所有的模式都提供了一套方法让**“系统中的某部分改变不会影响其他部分”**。
+根据该原则，我们知道Duck类的fly()和quack()会随着鸭子的不同而改变。为了把这两个行为从Duck类中分开，我们将把它们从Duck类中取出来，建立一组新类来代表每个行为。
+
+在设计鸭子的行为类时，我们用到了第二个设计原则：**针对接口编程，而不是针对实现编程**，这里针对接口编程真正的意思是**针对超类型编程**,超类型通常是一个接口或一个抽象类。我们可以制造出FlyBehavior接口和QuackBehavior接口，再制造一组其他类专门实现FlyBehavior和QuackBehavior。
+```java
+public abstract class Duck {
+	FlyBehavior flyBehavior;
+	QuackBehavior quackBehavior;
+ 
+	public Duck() {
+	}
+ 
+	public void setFlyBehavior (FlyBehavior fb) {
+		flyBehavior = fb;
+	}
+ 
+	public void setQuackBehavior(QuackBehavior qb) {
+		quackBehavior = qb;
+	}
+ 
+	abstract void display();
+ 
+	public void performFly() {
+		flyBehavior.fly();
+	}
+ 
+	public void performQuack() {
+		quackBehavior.quack();
+	}
+ 
+	public void swim() {
+		System.out.println("All ducks float, even decoys!");
+	}
+}
+```
+
+
+```java
+public interface FlyBehavior {//定义算法族，分别封装起来，可以互相替换，让算法的变化独立于使用算法的客户
+	public void fly();
+}
+```
+```java
+public interface QuackBehavior {
+	public void quack();
+}
+```
+完整代码位于[这里](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Strategy/src)。
+
+在我们的代码设计中，每一个鸭子都有一个FlyBehavior和一个QuackBehavior，好将飞行和呱呱叫委托给它们代为处理。当你将两个类结合起来使用，这就是组合，鸭子的行为不是继承来的，而是和适当的行为对象“组合”来的。这里体现了第三个设计原则：**多用组合，少用继承**。 
+
+策略模式的具体类图如下：
+![](http://pic.yupoo.com/crowhawk/GBC97WKa/UIV85.jpg)

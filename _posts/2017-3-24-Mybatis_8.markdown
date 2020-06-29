@@ -1,0 +1,284 @@
+---
+layout:     post
+title:      "MyBatis学习笔记(8)——高级映射之一对一映射"
+subtitle:   ""
+date:       2017-03-24 13:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 框架
+---
+
+>  MyBatis对于输出的高级映射分为一对一、一对多、多对多，本文将以一个订单商品数据模型为例，先介绍一对一映射的应用，在后续文章中依然会以这个模型陆续介绍一对多和多对多映射。
+
+# 需求分析
+
+在一个订单商品数据模型中，数据库内有四张表：
++ **用户表user**：记录了购买商品的用户信息
++ **订单表orders**：记录了用户所创建的订单（购买商品的订单）
++ **订单明细表orderdetail**：记录了订单的详细信息即购买商品的信息
++ **商品表items**：记录了商品信息
+
+### 表与表之间的业务关系：
+
+##### 数据级别之间有关系的表之间的业务关系:
+	
+###### user和orders
+**user ---> orders**：一个用户可以创建多个订单，**一对多**
+
+**orders ---> user**：一个订单只由一个用户创建，**一对一**
+
+###### orders和orderdetail
+**orders ---> orderdetail**：一个订单可以包括 多个订单明细，因为一个订单可以购买多个商品，每个商品的购买信息在orderdetail记录，**一对多**
+
+**orderdetail ---> orders**：一个订单明细只能包括在一个订单中，**一对一**
+
+###### orderdetail和items
+**orderdetail ---> itesms**：一个订单明细只对应一个商品信息，**一对一**
+
+**items ---> orderdetail**:一个商品可以包括在多个订单明细 ，**一对多**
+
+##### 数据库级别没有关系的表之间的业务关系：
+
+###### orders和items：
+**orders和items**之间可以通过orderdetail表建立关系。
+
+# 一对一映射
+
+> **案例**：查询所有订单信息，关联查询创建订单的用户信息，因为一个订单只能由一个用户创建，所以这是一对一的查询。
+
+## 使用resultType进行一对一映射
+
+### SQL语句
+
+查询的**主表**：订单表orders
+查询的**关联表**：用户表user
+由于orders表中有一个外键（user_id），通过外键关联查询用户表只能查询出一条记录，可以使用内链接。
+
+查询使用的SQL语句如下
+```sql
+SELECT 
+  orders.*,
+  USER.username,
+  USER.sex,
+  USER.address 
+FROM
+  orders,
+  USER 
+WHERE orders.user_id = user.id
+```
+
+### 创建pojo
+
+将上边sql查询的结果映射到pojo中，pojo中必须包括所有查询列名。
+原始的Orders.java不能映射user表中的字段，因此需要新创建的pojo。
+可以创建一个继承Orders类的新pojo类OrderCustom，在OrderCustom类中加入对应所需要查询的user字段username，sex，address的属性。
+
+```java
+package com.crow.po;
+
+/**
+ * Created by CrowHawk on 17/3/21.
+ */
+public class OrdersCustom extends Orders{
+    private String username;
+    private String sex;
+    private String address;
+    public String getUsername() {
+        return username;
+    }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    public String getSex() {
+        return sex;
+    }
+    public void setSex(String sex) {
+        this.sex = sex;
+    }
+    public String getAddress() {
+        return address;
+    }
+    public void setAddress(String address) {
+        this.address = address;
+    }
+}
+```
+
+### OrdersCustomMapper.xml
+
+```xml
+<!-- 查询订单关联查询用户信息 -->
+
+    <select id="findOrdersUser" resultType="com.crow.po.OrdersCustom">
+        SELECT
+        orders.*,
+        USER.username,
+        USER.sex,
+        USER.address
+        FROM
+        orders,
+        USER
+        WHERE orders.user_id = user.id
+    </select>
+```
+
+### OrderCustomMapper.java
+
+```java
+//查询订单关联查询用户信息
+public List<OrdersCustom> findOrdersUser()throws Exception;
+}
+```
+
+### 测试代码
+
+```java
+@Before
+    public void setUp() throws Exception {
+        // 创建sqlSessionFactory
+
+        // mybatis配置文件
+        String resource = "SqlMapConfig.xml";
+        // 得到配置文件流
+        InputStream inputStream = Resources.getResourceAsStream(resource);
+
+        // 创建会话工厂，传入mybatis的配置文件信息
+        sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+    }
+
+ @Test
+    public void testFindOrdersUser() throws Exception {
+
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        // 创建代理对象
+        OrdersCustomMapper ordersCustomMapper = sqlSession.getMapper(OrdersCustomMapper.class);
+
+        // 调用maper的方法
+        List<OrdersCustom> list = ordersCustomMapper.findOrdersUser();
+
+        System.out.println(list);//在此处打断点
+
+        sqlSession.close();
+    }
+```
+
+在`System.out.println(list);`处打断点，运行结果为
+![](http://pic.yupoo.com/crowhawk/GjO1hGPH/VVRwZ.jpg)
+
+## 使用resultMap进行一对一映射
+
+SQL语句同resultType实现方案。
+**思路：**使用resultMap将查询结果中的订单信息映射到Orders对象中，**在orders类中添加User属性**，将关联查询出来的用户信息映射到orders对象中的user属性中。
+
+### pojo(Orders.java)
+在Orders.java中添加user属性
+```java
+//用户信息
+    private User user;
+```
+
+### OrdersCustomMapper.xml
+
+#### 定义resultMap
+使用association标签来配置映射的关联的用户信息，具体用法见下文代码及注释
+```xml
+<!-- 订单查询关联用户的resultMap
+    将整个查询的结果映射到com.crow.po.Orders中
+     -->
+    <resultMap type="com.crow.po.Orders" id="OrdersUserResultMap">
+        <!-- 配置映射的订单信息 -->
+        <!-- 将查询结果中的订单信息映射到Orders对象中，在Orders中添加User属性，将关联查询出来的用户信息映射到orders对象中的user属性中>
+        <!- - id：指定查询列中的唯一标识，订单信息的中的唯 一标识，如果有多个列组成唯一标识，配置多个id
+            column：订单信息的唯一标识列
+            property：订单信息的唯一标识列所映射到Orders中哪个属性
+          -->
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="number" property="number"/>
+        <result column="createtime" property="createtime"/>
+        <result column="note" property="note"/>
+
+        <!-- 配置映射的关联的用户信息 -->
+        <!-- association：用于映射关联查询单个对象的信息
+        property：要将关联查询的用户信息映射到Orders中哪个属性
+         -->
+        <association property="user"  javaType="com.crow.po.User">
+            <!-- id：关联查询用户的唯一标识
+            column：指定唯一标识用户信息的列
+            javaType：映射到user的哪个属性
+             -->
+            <id column="user_id" property="id"/>
+            <result column="username" property="username"/>
+            <result column="sex" property="sex"/>
+            <result column="address" property="address"/>
+
+        </association>
+    </resultMap>
+```
+
+#### 定义statement
+
+```xml
+<!-- 查询订单关联查询用户信息，使用resultmap -->
+    <select id="findOrdersUserResultMap" resultMap="OrdersUserResultMap">
+        SELECT
+        orders.*,
+        USER.username,
+        USER.sex,
+        USER.address
+        FROM
+        orders,
+        USER
+        WHERE orders.user_id = user.id
+    </select>
+```
+
+### OrderCustomMapper.java
+
+```java
+public List<Orders> findOrdersUserResultMap();
+```
+
+### 测试代码
+
+```java
+@Before
+    public void setUp() throws Exception {
+        // 创建sqlSessionFactory
+
+        // mybatis配置文件
+        String resource = "SqlMapConfig.xml";
+        // 得到配置文件流
+        InputStream inputStream = Resources.getResourceAsStream(resource);
+
+        // 创建会话工厂，传入mybatis的配置文件信息
+        sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+    }
+
+@Test
+    public void testFindOrdersUserResultMap() throws Exception {
+
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        // 创建代理对象
+        OrdersCustomMapper ordersCustomMapper = sqlSession.getMapper(OrdersCustomMapper.class);
+
+        // 调用maper的方法
+        List<Orders> list = ordersCustomMapper.findOrdersUserResultMap();
+
+        System.out.println(list);
+
+        sqlSession.close();
+    }
+```
+同样在`System.out.println(list);`处打断点，运行结果为
+![](http://pic.yupoo.com/crowhawk/GjO1hGPH/VVRwZ.jpg)
+与resultType实现方法一致。
+
+# 总结
+实现一对一映射时，使用`resultType`实现较为简单，如果pojo中没有包括查询出来的列名，需要增加列名对应的属性，即可完成映射。如果没有查询结果的特殊要求建议使用`resultType`。
+使用`resultMap`时，需要另外定义`resultMap`，实现有点麻烦，如果对查询结果有特殊的要求，使用resultMap可以**将关联查询映射到pojo的属性中**。此外，resultMap可以实现延迟加载，resultType无法实现延迟加载，这将在后续文章中介绍。
+
+

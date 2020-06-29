@@ -1,0 +1,178 @@
+---
+layout:     post
+title:      "设计模式(6)——命令模式"
+subtitle:   ""
+date:       2017-07-20 22:00:06
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 设计模式
+    - 读书笔记
+---
+
+**命令（Command）模式**将**“请求”**封装成对象，以便使用不同的请求队列或者日志来参数化其他对象。命令模式也支持可撤销的操作。
+
+直接用一个[实例](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Command/src)来加以说明：
+该代码模拟了一个智能家居遥控器，这个遥控器有七个可编程的插槽（每个插槽对应一个不同的家电装置），每个插槽都有一对相对应的开／关按钮，这个遥控器还有一个整体的撤销按钮。遥控器应该知道如何解读按钮被按下的动作，然后向家电发出正确的请求，但是遥控器不需知道这些家电自动化的细节，或者如何打开热水器。
+
+命令模式可将“动作的请求者”从“动作的执行者”对象中解耦，在设计中采用**“命令对象”**，把请求（例如打开电灯）封装成一个特定对象（例如客厅电灯对象）。如果对每个按钮都存储一个命令对象，那么当按钮被按下的时候，就可以请命令对象做相关的工作。遥控器并不需要知道工作内容是什么，只要有个命令对象能和正确的对象沟通，把事情做好就可以了，这样一来，**遥控器（即发出请求的对象，Invoker）**和**各个家电对象（即接受与执行这些请求的对象，Receiver）**就解耦了。
+
+命令模式的类图为
+![](https://pic.yupoo.com/crowhawk/ad61a100/b3840275.png)
+
+下面直接来看代码
+
+命令接口
+```java
+public interface Command {
+	public void execute();
+	public void undo();
+}
+```
+实现一个打开电灯的命令
+```java
+import com.crow.Receiver.Light;
+
+public class LightOnCommand implements Command {
+	Light light;
+
+	public LightOnCommand(Light light) {
+		this.light = light;
+	}
+
+	public void execute() {
+		light.on();
+	}
+
+	public void undo() {
+		light.off();
+	}
+}
+```
+电灯类：
+```java
+public class Light {
+	String location;
+	int level;
+
+	public Light(String location) {
+		this.location = location;
+	}
+
+	public void on() {
+		level = 100;
+		System.out.println("Light is on");
+	}
+
+	public void off() {
+		level = 0;
+		System.out.println("Light is off");
+	}
+
+	public void dim(int level) {
+		this.level = level;
+		if (level == 0) {
+			off();
+		}
+		else {
+			System.out.println("Light is dimmed to " + level + "%");
+		}
+	}
+
+	public int getLevel() {
+		return level;
+	}
+}
+```
+命令的请求者：遥控器，其中还实现了一键撤销按钮undo
+```java
+import com.crow.Command.Command;
+import com.crow.Command.NoCommand;
+
+//
+// This is the invoker
+//
+public class RemoteControl {
+	Command[] onCommands;
+	Command[] offCommands;
+	Command undoCommand;
+ 
+	public RemoteControl() {
+		onCommands = new Command[7];
+		offCommands = new Command[7];
+ 
+		Command noCommand = new NoCommand();
+		for(int i=0;i<7;i++) {
+			onCommands[i] = noCommand;
+			offCommands[i] = noCommand;
+		}
+		undoCommand = noCommand;
+	}
+  
+	public void setCommand(int slot, Command onCommand, Command offCommand) {
+		onCommands[slot] = onCommand;
+		offCommands[slot] = offCommand;
+	}
+ 
+	public void onButtonWasPushed(int slot) {
+		onCommands[slot].execute();
+		undoCommand = onCommands[slot];
+	}
+ 
+	public void offButtonWasPushed(int slot) {
+		offCommands[slot].execute();
+		undoCommand = offCommands[slot];
+	}
+
+	public void undoButtonWasPushed() {
+		undoCommand.undo();
+	}
+ 
+	public String toString() {
+		StringBuffer stringBuff = new StringBuffer();
+		stringBuff.append("\n------ Remote Control -------\n");
+		for (int i = 0; i < onCommands.length; i++) {
+			stringBuff.append("[slot " + i + "] " + onCommands[i].getClass().getName()
+				+ "    " + offCommands[i].getClass().getName() + "\n");
+		}
+		stringBuff.append("[undo] " + undoCommand.getClass().getName() + "\n");
+		return stringBuff.toString();
+	}
+}
+```
+此外，还有一个宏命令类，其中用命令数组存储一大堆命令，可以一次性实施和撤销多个命令。
+```java
+public class MacroCommand implements Command {
+	Command[] commands;
+ 
+	public MacroCommand(Command[] commands) {
+		this.commands = commands;
+	}
+ 
+	public void execute() {
+		for (int i = 0; i < commands.length; i++) {
+			commands[i].execute();
+		}
+	}
+ 
+    /**
+     * NOTE:  these commands have to be done backwards to ensure proper undo functionality
+     */
+	public void undo() {
+		for (int i = commands.length -1; i >= 0; i--) {
+			commands[i].undo();
+		}
+	}
+}
+```
+查看完整代码请[点击此处](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Command/src)。
+
+### 应用
+
++ **日志请求**：
+当我们执行命令的时候，将历史记录储存在磁盘中，一旦系统死机，我们就可以将命令对象重新加载，并成批地依次调用这些对象的execute()方法，通过使用记录日志，我们可以将上次checkpoint之后的所有操作记录下来，如果系统出状况，从checkpoint开始恢复这些操作。
++ **事务（transaction）处理**
+使用宏命令，我们可以一次完成或撤销一组操作，这样一来，一整群操作必须全部进行完成，或者没有进行任何的操作，这就实现了事务处理的原理。
+

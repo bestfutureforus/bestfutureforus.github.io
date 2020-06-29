@@ -1,8 +1,7 @@
-.env
-.DS_Store
-.s3-website.json
-node_modules/
-
 _site
-.sass-cache
-.jekyll-metadata
+node_modules
+npm-debug.log
+.DS_Store
+*/.DS_Store
+*/*/.DS_Store
+*.sh

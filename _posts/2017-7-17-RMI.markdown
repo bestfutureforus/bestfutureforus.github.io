@@ -1,0 +1,135 @@
+---
+layout:     post
+title:      "Java RMI初探"
+subtitle:   ""
+date:       2017-07-17 22:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 分布式
+---
+
+## RPC
+
+ **RPC（Remote Procedure Call，远程过程调用）**是一种通信协议，它通过网络从远程计算机程序上请求服务，而不需要了解底层网络技术的协议。
+ **一个通俗的例子：**两台服务器A和B，有一个应用程序部署在A上，它想调用B上的应用提供的函数／方法，由于它们不在同一个内存空间，不能直接调用，需要通过网络来表达调用的语义和需要传输的数据。
+ 为此RPC需要做以下方面的工作：
+ + **通讯：**RPC 假定某些传输协议的存在，如TCP或UDP，为通信程序之间携带信息数据。RPC采用C/S架构，在客户机和服务器中建立一个TCP/UDP连接，则远程调用所交换的数据都在这个连接里传输。
+ + **寻址：**A服务器上的应用需要告诉底层RPC框架B服务器的IP地址、端口以及方法名。
+ + **序列化和反序列化：**当A服务器上的应用程序发起远程调用时，方法的参数要通过网络协议（如TCP）传输到B服务器，而网络协议是基于二进制的，所以A服务器内存中参数的值需要序列化为二进制后再发送给B服务器。B服务器接收到A服务器发送过来的二进制参数时，需要对其进行反序列化，将其恢复为内存能识别的表达方式，然后通过寻址找到对应的方法进行本地调用，得到其返回值，将返回值再序列化后发回A服务器上的应用，A服务器接收二进制返回值后再进行反序列化，最后将内存能识别的表达方式传给A中的应用程序。
+
+RPC简单地说就是像调用本地服务一样调用远程服务，它的存在让构建**分布式计算程序**的时候更容易，在提供强大的远程调用能力时不损失本地调用的语义简洁性。
+ 
+## RMI
+
+**RMI（Remote Method Invocation，远程方法调用）**是 **RPC**的一种实现，是一种分布式Java应用的实现方式。它的目的在于对开发人员屏蔽横跨不同JVM和网络连接等细节，使得分布在不同JVM上的对象像是存在于一个统一的JVM中一样，可以很方便的互相通讯。
+
+### 实现原理
+
+RMI采用典型的客户机／服务器架构。它为客户对象和服务对象提供了**客户辅助对象（stub，桩）**和**服务辅助对象（skeleton，骨架）**，来帮助本地客户对象真正和服务对象进行沟通。RMI为stub创建和服务对象相同的方法，客户调用stub上的方法，仿佛stub就是真正的服务，stub再负责为我们转发这些请求。
+换句话说，客户对象以为它调用的是远程服务上的方法，因为stub乔装成服务对象，假装自己有客户所要调用的方法。
+虽然stub看起来很像远程服务（因为具有服务所宣称的相同的方法），但它并不真正拥有客户所期望的方法逻辑。stub会联系服务器，传送方法调用信息（例如方法名称、变量等），然后等待服务器的返回。
+在服务器端，skeleton通过Socket连接从stub中接收请求，将调用的信息解包，然后调用真正服务对象上的真正方法。所以，对于服务对象来说，调用是本地的，来自skeleton，而不是远程客户。
+skeleton从服务中得到返回值，将它打包，然后运回到stub（通过网络Socket的输出流），stub对信息解包，最后将返回值交给客户对象。
+RMI的好处在于我们不必亲自写任何网络或I/O代码，客户程序调用远程方法（即真正的服务所在）就和在运行在客户自己的JVM上对对象进行正常方法调用一样。
+![RMI](http://pic.yupoo.com/crowhawk/GBmTk6T5/U1GRq.jpg)
+
+### 实例解析
+
+下面用一个例子来看如何把对象变成服务——可以接受远程调用的服务。也看看如何让客户做远程调用
+
+#### 制作远程服务
+
+在Java5以前，RMI遵循以下步骤来制作远程服务：
+
+**一、制作远程接口**
+远程接口定义出可以让客户远程调用的方法。客户将用它作为服务的类类型。stub和实际的服务都实现此接口。任何远程接口都必须要扩展`java.rmi.Remote`接口，这是一个记号接口，没有具体的方法。
+```java
+import java.rmi.*;
+
+public interface MyRemote extends Remote {
+	public String sayHello() throws RemoteException;//返回类型是primitive类型，该方法需要抛出RemoteException
+}
+```
+注意：
++ 客户会调用实现远程接口的stub上的方法，而stub底层用到了网络和I/O，所以各种坏事情都可能发生，必须抛出`RemoteException`异常。
++ 由于远程方法的变量必须被打包并通过网络运送，必须靠序列化完成，所以远程方法的变量和返回值必须属于`primitive`类型或`Serializable`类型。
+
+**二、制作远程的实现**
+这是实际工作的类，为远程接口中定义的远程方法提供了真正的实现。这就是客户真正想要调用方法的对象。这个服务必须实现远程接口，且为了成为远程服务对象，我们的对象需要某些“远程的”功能，最简单的方式是扩展`java.rmi.server.UnicastRemoteObject`，让超类帮我们完成这些工作。
+```java
+public class MyRemoteImpl extends UnicastRemoteObject implements MyRemote {
+	public MyRemoteImpl() throws RemoteException {}//构造器也需要抛出异常
+
+	@Override
+	public String sayHello() {
+		return "Server says, 'Hey' ";	
+	}
+
+	public static void main (String[] args) {
+		try {
+			MyRemote service = new MyRemoteImpl();
+			Naming.rebind("RemoteHello", service);//使用RMI Registry注册此服务
+		} catch(Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+}
+```
+当我们完成远程服务的实现后，必须让它可以被远程客户调用，此时需要做的就是将此服务实例化，然后放进RMI Registry中（记得先确定RMI Registry正在运行）。当注册这个对象时，RMI系统其实注册的是stub，因为这是客户真正需要的。注册服务使用了`java.rmi.Naming`类的静态`rebind()`方法。
+
+**三、产生stub和skeleton**
+使用JDK内的工具`rmic`即可为服务类生成stub和skeleton，命名习惯是在远程实现的名字后面加上_Stub或_Skel。在命令行中cd到MyRemoteImpl类所在的目录下，执行`rmic MyRemoteImpl`即可。
+
+**四、执行rmiregistry**
+开启一个终端，启动rmiremistry。
+先确定启动目录必须可以访问你的类。最简单的做法是从你的“classes”目录启动。
+
+**五、启动服务**
+开启一个终端，在本例中，我们从实现类的main()方法启动服务，在终端里执行java MyRemoteImpl即可。
+
+#### 客户取得stub对象
+
+客户必须取得stub对象（我们的代理）以调用其中的方法。所以我们需要RMI Registry的帮忙。客户从Registry中寻找（lookup）代理。
+工作方式：
++ 客户到RMI registry中寻找
+	`(MyRemote)Naming.lookup("rmi://127.0.0.1/RemoteHello");`
++ RMI registry返回stub对象
+（作为lookup方法的返回值）然后RMI会自动对stub反序列化，你在客户端必须有stub类（由rmic生成），否则stub就无法被反序列化。
++ 客户调用stub的方法，就像stub就是真正的服务对象一样。
+
+```java
+import java.rmi.*;
+
+public class MyRemoteClient {
+	public static void main (String[] args) {
+		new MyRemoteClient().go();
+	}
+
+	public void go() {
+		try{
+			MyRemote service = (MyRemote)Naming.lookup("rmi://127.0.0.1/RemoteHello");//客户到RMI registry中寻找。
+			String s = service.sayHello();
+			System.out.println(s);
+		} catch(Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+}
+```
+在客户端，客户使用远程接口调用stub方法。虽然客户JVM需要stub类，但从来不在代码中引用stub类。客户总是使用远程接口，就如同远程接口就是真正的远程对象一样。
+在服务器端，服务器需要stub和skeleton类，也需要服务和远程接口，之所以会需要stub类，是因为stub是真正服务的替身。当真正服务被绑定到RMI registry时，其实真正被绑定的是stub。
+
+### 小结
+
++ RMI的原理设计中体现了Proxy设计模式的精妙思想。
++ 本文中用stub和skeleton介绍了RMI的基本原理。实际上在Java1.5以后，随着动态代理技术的出现，我们已不需要使用rmic来生成stub和skeleton。对于skeleton，Java的RMI可以使用reflectionAPI直接将客户调用分派给远程服务。对于stub，远程对象的stub是java.lang.reflect.Proxy实例，它是自动产生的，来处理所有把客户的本地调用变成远程调用的细节，所以我们不再需要使用rmic，客户和远程沟通的一切都在幕后处理掉了。
+尽管如此，笔者在文章中还是呈现了skeleton和stub，因为这有助于从概念上理解RMI的内部机制。
++ 关于RMI更复杂一些的一个实例，可以在[我的Github](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Proxy/src/main/java/com/crow/remoteproxy)中看到。
+
+## 参考文献
+
+[《Head First Design Patterns》Chapter 11——The Proxy Pattern: Controlling Object Access](http://shop.oreilly.com/product/9780596007126.do)
+

@@ -1,0 +1,136 @@
+---
+layout:     post
+title:      "MyBatis学习笔记(3)——使用原始方法开发Dao"
+subtitle:   ""
+date:       2017-03-23 12:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 框架
+---
+
+**需求：**
++ 根据用户id查询一个用户信息
++ 根据用户名称模糊查询用户信息列表
++ 添加用户信息
++ 删除用户信息
+
+> 使用Mybatis开发Dao，通常有两个方法，即**原始Dao开发方法**和**Mapper接口开发方法**。本文将先介绍原始Dao开发方法，Mapper接口开发方法会在后续文章中介绍。
+
+## SqlSession的使用范围
+
+SqlSession中封装了对数据库的操作，如：查询、插入、更新、删除等。
+通过SqlSessionFactory创建SqlSession，而SqlSessionFactory是通过SqlSessionFactoryBuilder进行创建。
+
+---
+####  SqlSessionFactoryBuilder
+SqlSessionFactoryBuilder用于创建SqlSessionFacoty，SqlSessionFacoty一旦创建完成就不需要SqlSessionFactoryBuilder了，因为SqlSession是通过SqlSessionFactory生产，所以可以**将SqlSessionFactoryBuilder当成一个工具类使用**，不需要使用单例管理SqlSessionFactoryBuilder。在需要创建SqlSessionFactory时候，只需要new一次SqlSessionFactoryBuilder即可。
+#### SqlSessionFactory
+SqlSessionFactory是一个接口，接口中定义了openSession的不同重载方法，SqlSessionFactory的最佳使用范围是整个应用运行期间，一旦创建后可以重复使用，通常以单例模式管理SqlSessionFactory。
+#### SqlSession
+SqlSession是一个面向用户（程序员）的接口。
+SqlSession中提供了很多操作数据库的方法：如：selectOne(返回单个对象)、selectList（返回单个或多个对象）。
+SqlSession是线程不安全的，在SqlSesion实现类中除了有接口中的方法（操作数据库的方法）还有数据域属性。
+**SqlSession最佳应用场合在方法体内，定义成局部变量使用。**
+
+## 原始Dao开发方法
+ 
+### 思路
+程序员需要写Dao接口和Dao实现类。
+需要向Dao实现类中注入SqlSessionFactory，在方法体内通过SqlSessionFactory创建SqlSession。
+
+### Dao接口
+UserDao.java
+```java
+public interface UserDao {
+    public void insertUser(User user) throws Exception;
+    public User findUserById(int id) throws Exception;
+    public List<User> findUserByName(String name) throws Exception;//模糊查找
+    public void deleteUser(int id) throws Exception;
+}
+```
+
+### Dao接口实现类
+UserDaoImpl.java
+```java
+public class UserDaoImpl implements UserDao {
+    private SqlSessionFactory sqlSessionFactory;
+    public UserDaoImpl(SqlSessionFactory sqlSessionFactory){
+        this.sqlSessionFactory = sqlSessionFactory;
+    }
+
+    @Override
+    public void insertUser(User user) throws Exception{
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        sqlSession.insert("test.insertUser", user);
+        sqlSession.commit();
+        sqlSession.close();
+    }
+
+    @Override
+    public User findUserById(int id) throws Exception{
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        User user = sqlSession.selectOne("test.findUserById", id);
+        sqlSession.close();
+        return user;
+    }
+
+    @Override
+    public List<User> findUserByName(String name) throws Exception{
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        List<User> userList = sqlSession.selectList("test.findUserByName", name);
+        sqlSession.close();
+        return userList;
+    }
+
+    @Override
+    public void deleteUser(int id) throws Exception{
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        sqlSession.delete("test.deleteUser", id);
+        sqlSession.commit();
+        sqlSession.close();
+    }
+}
+```
+
+### 测试代码
+测试查询功能
+```java
+public class UserDaoImplTest {
+    private SqlSessionFactory sqlSessionFactory;
+
+    @Before
+    public void setUp() throws IOException{
+        String resource = "SqlMapConfig.xml";
+        InputStream inputStream = Resources.getResourceAsStream(resource);
+        sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+    }
+
+    @Test
+    public void findUserByIdTest() throws Exception{
+        UserDao userDao = new UserDaoImpl(sqlSessionFactory);
+        User user = userDao.findUserById(1);
+        System.out.println(user);
+    }
+
+    @Test
+    public void findUserByNameTest() throws Exception{
+        UserDao userDao = new UserDaoImpl(sqlSessionFactory);
+        List<User> userList = userDao.findUserByName("小明");
+        System.out.println(userList);
+    }
+}
+```
+
+测试`findUserById`运行结果如下：
+![](http://pic.yupoo.com/crowhawk/GjFSySrd/15t8Sh.jpg)
+测试`findUserByName`运行结果如下
+![](http://pic.yupoo.com/crowhawk/GjFSyGax/BhBdf.jpg)
+
+### 问题总结
++ Dao接口实现类方法中存在大量模板方法，最好能将这些代码提取出来，大大减轻程序员的工作量。
++ 调用sqlsession方法时statement的id存在硬编码，不利于系统维护。
++ 由于sqlsession方法使用泛型，调用sqlsession方法时传入的变量，即使变量类型传入错误，在编译阶段也不报错，不利于开发。
+

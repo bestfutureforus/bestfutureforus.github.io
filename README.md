@@ -1,231 +1,319 @@
-# Barber
-Barber is a minimal blog theme built for Jekyll. The blog theme features a masonry grid, endless scrolling, and page transitions. 💈 Barber is also available for [Ghost](https://github.com/samesies/barber-ghost).
+#Hux Blog
 
-![Barber](https://raw.githubusercontent.com/samesies/barber-jekyll/master/barber.jpg "Barber")
+###[View Live Hux Blog &rarr;](https://huangxuan.me)
 
-## Initial Setup
-* [Installation](#installation)
-* [Update Settings](#update-settings)
-* [Create Posts](#create-posts)
-* [Create Pages](#create-pages)
-* [Create Navigation](#create-navigation)
+![](http://huangxuan.me/img/blog-desktop.jpg)
 
-## Customization
-* [Contact Form](#contact-form)
-* [Social Media Links](#social-media-links)
-* [Disqus Comments](#disqus-comments)
 
-## Additional Development
-* [Deployment](#deployment)
-* [Source Code](#source-code)
-* [Donations](#donations)
-* [Support](#support)
 
-### Installation
-Jekyll requires all dependencies to be saved in the ````Gemfile````. Run ````bundle install```` (Install [Bundler](http://bundler.io/) if it is not already) on your command line after downloading or cloning the theme. You can then run ````bundle exec jekyll serve```` or ````npm start```` to see your development site. Run ````bundle exec jekyll build```` or ````npm run build```` to build a production ready site for deployment.
+## Boilerplate (beta)
 
-### Update Settings
-Almost everything to personalize your site is in the ````_config.yml````. 
+Want to clone a boilerplate instead of my buzz blog? Here comes this!  
 
 ```
-# Site/SEO settings
-email: okay@samesies.io
-baseurl: ""
-permalink: /:year/:month/:day/:title/
-google_analytics: 
-
-name: Thomas Vaeth
-title: The Barber Theme
-description: >
-  Barber is a blog theme for Jekyll built by Thomas Vaeth for Samesies using HTML, Sass, and JavaScript.
-url: http://barber.samesies.io
-twitter_username: thomasvaeth
-default_img: /assets/images/seo.jpg
-social:
-  - name: twitter
-    url: https://twitter.com/thomasvaeth
-  - name: instagram
-    url: https://www.instagram.com/thomas.vaeth/
-  - name: linkedin
-    url: https://www.linkedin.com/in/thomasvaeth/
-  - name: github
-    url: https://github.com/samesies
-  - name: codepen
-    url: https://codepen.io/thomasvaeth/
-
-# Contact settings
-contact_img: /assets/images/placeholder-28.jpg
-formcarry: https://formcarry.com/s/HkIo0nMb7
-
-# Disqus settings
-disqus: test-apkdzgmqhj
-
-# MailChimp settings
-mailchimp_action: https://samesies.us17.list-manage.com/subscribe/post-json?u=66ddf555dab480e6a8606430b&amp;id=89b3ee034f
-mailchimp_input: b_66ddf555dab480e6a8606430b_89b3ee034f
-
-# Author settings
-author:
-  - name: Thomas Vaeth
-    bio: Thomas Vaeth was born in New York, raised in Pennsylvania, and transplanted in Washington. He was a Web Developer at Urban Influence, but now he's a Software Engineer at Getty Images.
-    url: http://thomasvaeth.com
-
-# Pagination settings
-pagination:
-  enabled: true
-  debug: false
-  per_page: 12
-  permalink: '/page/:num/'
-  title: ':title'
-  limit: 0
-  sort_field: 'date'
-  sort_reverse: true
-autopages:
-  enabled: true
-  categories:
-    enabled: false
-  collections:
-    enabled: false
-  tags:
-    layouts: 
-      - 'tag.html'
-    title: 'The Barber Theme'
-    permalink: '/tag/:tag'
-    slugify:
-      mode: raw
-      cased: true
+$ git clone git@github.com:Huxpro/huxblog-boilerplate.git
 ```
 
-You can change the URL the [contact form](#contact-form) is sent to, add Google Analytics, change the SEO settings, grow your website with additional authors, and much more.
+**[View Boilerplate Here &rarr;](http://huangxuan.me/huxblog-boilerplate/)**
 
-### Create Posts
-All posts go upder the ````_posts```` directory. You can also have a ````_drafts```` directory with posts that will on your development page, but not in production.
+
+## Porting 
+
+- [**Hexo**](https://github.com/Kaijun/hexo-theme-huxblog) by @kaijun
+- [**React-SSR**](https://github.com/LucasIcarus/huxpro.github.io/tree/ssr) by @LucasIcarus
+
+## Translation
+
+ - ![cn](https://raw.githubusercontent.com/gosquared/flags/master/flags/flags/shiny/24/China.png) **Chinese (Simplified)**: 感谢 [@BrucZhaoR](https://github.com/BruceZhaoR) 的 [中文翻译 &rarr;](https://github.com/Huxpro/huxpro.github.io/blob/master/README.zh.md)
+
+## Features
+
+##### New Feature (V1.5.2)
+
+- Annoyed to delete my blog post after clone or pull? **Boilerplate** comes to help you get started quickly and easily merge update.
+- `-apple-system` is added in font rule, which display beautiful new font **San Francisco** in iOS 9 by default.
+- Fixed [issue#15](https://github.com/Huxpro/huxpro.github.io/issues/15) about code wrap.
+
+##### New Feature (V1.5.1)
+
+- **[Comment](#comment)** support [**Disqus**](http://disqus.com) officially, thanks to @rpsh.
+
+##### New Feature (V1.5)
+
+- **[Comment](#comment)** and **[Analytics](#analytics)** is configurable now! We also add **Google Analytics support** and drop tencents. Both documents is updated.
+
+##### New Feature (V1.4)
+
+- **[Featured Tags](#featured-tags)** is now independent of [SideBar](#sidebar). Both documents is updated.
+- New **[SEO Title](#seo-title)** for SEO usage which is differ from the site title
+
+##### New Feature (V1.3.1)
+
+- Support **PingFang (苹方)**, the new Chinese font presented by [OS X El Capitan](http://www.apple.com/cn/osx/whats-new/)
+
+
+##### New Feature (V1.3)
+
+- Big Improvement to the **Navigation Menu** *(especially in Android)*:  Dropping the old, stuttering, low-performance [Bootstrap collapse.js](http://getbootstrap.com/javascript/#collapse),  replaced with an own wrote, [jank free](http://jankfree.org/) navbar menu in a pretty high-performance implementation of [Google Material Design](https://www.google.com/design/spec/material-design/introduction.html).
+
+<img src="http://huangxuan.me/img/blog-md-navbar.gif" width="320" />
+
+
+##### New Feature (V1.2)
+
+- Brand new **[Keynote Layout](#keynote-layout)** is provided for easily posting beautiful HTML presentations you have created with this blog
+
+
+##### New Feature (V1.1)
+
+- We now support a clean and gorgeous **[SideBar](#sidebar)** for displaying more info
+- **[Friends](#friends)** is also added as a common feature of blog help you do SEO
+
+##### V1.0
+
+- Full-feature **Tag** support
+- **Mobile first** user experience optimization
+- **Typographic optimization** for Chinese Fonts
+- **Network optimizaition** for China, dropping Google webfont, using local CDN
+- Using [Github Flavored Markdown](https://help.github.com/articles/github-flavored-markdown/)
+- Using Baidu, Tencent/QQ analytics
+- Using [DuoShuo](http://duoshuo.com/) as the Disqus-like third party discussion system
+
+
+## Support
+
+- **Feel free to fork. I'll Appreciate it if you keep the Author & Github link at footer**
+- Give it a **Star** if you like, fork or just clone to use ;)
+- If any problem or requirement, just open an issue here and I will help you.
+
+
+## Document
+
+* Get Started
+	* [Environment](#environment)
+	* [Get Started](#get-started)
+	* [Write Posts](#write-posts)
+* Components
+	* [SideBar](#sidebar)
+	* [Mini About Me](#mini-about-me)
+	* [Featured Tags](#featured-tags)
+	* [Friends](#friends)
+	* [Keynote Layout](#keynote-layout)
+* Comment & Analysis
+	* [Comment](#comment)
+	* [Analytics](#analytics)
+* Advanced
+	* [Customization](#customization)
+	* [Header Image](#header-image)
+	* [SEO Title](#seo-title)
+	* [Page Build Warning](#page-build-warning)
+
+#### Environment
+
+If you have jekyll installed, simply run `jekyll serve` in Command Line
+and preview the themes in your browser. You can use `jekyll serve --watch` to watch for changes in the source files as well.
+
+
+#### Get Started
+
+You can easily get started by modifying `_config.yml`:
+
+```
+# Site settings
+title: Hux Blog             # title of your website
+SEOTitle: Hux Blog			# check out docs for more detail
+description: "Cool Blog"    # ...
+
+# SNS settings      
+github_username: huxpro     # modify this account to yours
+weibo_username: huxpro      # the footer woule be auto-updated.
+
+# Build settings
+# paginate: 10              # nums of posts in one page
+```
+
+There are more options you can check out in the [Jekyll - Official Site](http://jekyllrb.com/), or you can directly dive into code to find more.
+
+
+#### Write Posts
+
+Feel free to checkout Markdown files in the `_posts/`, you will quickly realized how to post your articles with magical markdown plus this nice theme.
+
+The **front-matter** of a post looks like that:
 
 ```
 ---
-layout: post
-title: "Brunch Swag"
-date: 2017-02-18
-description: 
-image: /assets/images/placeholder-15.jpg
-author: Thomas Vaeth
-tags: 
-  - XOXO
-  - La Croix
+layout:     post
+title:      "Hello 2015"
+subtitle:   "Hello World, Hello Blog"
+date:       2015-01-29 12:00:00
+author:     "Hux"
+header-img: "img/post-bg-2015.jpg"
+tags:
+    - Life
+---
+
+```
+
+#### SideBar
+
+![](http://huangxuan.me/img/blog-sidebar.jpg)
+
+Seeing more information may be necessary for you to display, from V1.1, a clean, gorgeous **SideBar** is added for you, which provide more area for displaying possible modules. You can enable *(it is default enable)* this feature by simply config:
+
+```
+# Sidebar settings
+sidebar: true
+sidebar-about-description: "your description here"
+sidebar-avatar: /img/avatar-hux.jpg     # use absolute URL.
+```
+
+We default support *[Featured Tags](#featured-tags)*, *[Mini About Me](#mini-about-me)* and *[Friends](#friends)* these three modules and you can add your own. The sidebar is naturally responsive and would be push to bottom in a small screen size (`<= 992px`, according to [Bootstarp Grid System](http://getbootstrap.com/css/#grid))  
+More details of these three separate modules are talking below.
+
+#### Mini About Me
+
+Mini-About-Me module display all your SNS buttons also your avatar and the description if you set `sidebar-avatar` and `sidebar-about-description` which is very useful and common for a sidebar so it is default with your sidebar.
+
+It is really nice-looking and well-designed. It would be hidden in a small screen seeing the sidebar would be push to bottom and there is already a footer including SNS feature which is similar.
+
+#### Featured Tags
+
+Considering the Featured-Tags feature in [Medium](http://medium.com) is pretty cool, so I add it in my blog theme also.   
+This module is independent of sidebar from V1.4, so it can definitely live without enable sidebar, which would be displayed in the bottom when `sidebar` set to false, and it is not only displayed in home page but also every post page bottom.
+
+
+```
+# Featured Tags
+featured-tags: true  
+featured-condition-size: 1     # A tag will be featured if the size of it is more than this condition value
+```
+
+The only one thing need to be paid attention to is the `featured-condition-size`: A tag will be featured if the size of it is more than this condition value.  
+Internally, a condition template `{% if tag[1].size > {{site.featured-condition-size}} %}` is used to do the filter.
+
+#### Friends
+
+Friends is a very common feature of a blog seeing the SEO, so I add it in V1.1 release to help that.   
+Friends can also live without enable sidebar, also be displayed in the bottom when sidebar unable, and be displayed in every post page bottom.
+
+
+You can just add your friends information in `_config.yml` with a familiar JSON syntax and everything is done, very easy:
+
+```
+# Friends
+friends: [
+    {
+        title: "Foo Blog",
+        href: "http://foo.github.io/"
+    },
+    {
+        title: "Bar Blog",
+        href: "http://bar.github.io"
+    }
+]
+```
+
+
+#### Keynote Layout
+
+![](http://huangxuan.me/img/blog-keynote.jpg)
+
+There is a increasing tendency to use Open Web technology to create keynotes, presentations, like Reveal.js, Impress.js, Slides, Prezi etc. I consider a modern blog should have abilities to post these HTML based presentation easily also abilities to play it directly.
+
+Under the hood, a `iframe` is used to include webpage from outer source, so the only things left is to give a url in the **front-matter**:
+
+```
+---
+layout:     keynote
+iframe:     "http://huangxuan.me/js-module-7day/"
 ---
 ```
 
-The front matter has to have a layout of page. All the other fields are completely optional. If you have an ````author```` variable, then it must match an author's name in ````_config.yml```` (see [Update Settings](#update-settings)). The ````tag```` variable will add a related section to the post and popular tags to the footer.
+The iframe will be automatically resized to adapt different form factors also the device orientation. A padding is left to imply user that there has more content below, also to ensure that there is a area for user to scroll down in mobile device seeing most of the keynote framework prevent the browser default scroll behavior.
 
-### Create Pages
-Creating a static page is the same as creating a post. The only difference is a page is in the root of the directory rather than the ````_posts```` directory.
 
-```
----
-layout: page
-title: Style Guide
-image: /assets/images/placeholder-18.jpg
----
-```
+#### Comment
 
-You just have to make sure the front matter has a layout of page instead of post. If there is no title or image, then the page will default to the site configuration.
+This theme support both [Disqus](http://disqus.com) and [Duoshuo](http://duoshuo.com) as the third party discussion system.
 
-### Create Navigation
-You can create a navigation in ````_includes/navigation.html````. Visitors can be linked directly to pages right on the top of your website.
+First, you need to sign up and get your own account. **Repeat, DO NOT use mine!** (I have set Trusted Domains) It is deathly simple to sign up and you will get the full power of management system. Please give it a try!
 
-***
-
-### Contact Form
-The form uses [Formcarry](https://formcarry.com/) to send submitted messages straight to your inbox. The image on the popup is the the ````contact_img```` variable and the URL the forms sends to is the ````formcarry```` variable in ````_config.yml```` (see [Update Settings](#update-settings)).
-
-![Contact Form](http://samesies.io/assets/images/barber/doc/framed-contact-form.jpg "Contact Form")
-
-This file can be found in ````_includes/formscarry.html````. You can change the labels of the form here. After everything is set you will need to submit a message to yourself to confirm everything is correct.
-
-### Social Media Links
-[Font Awesome](http://fontawesome.io/) is used for the social media icons. The icons in the theme can be found in ````_includes/share.html```` and ````_includes/social.html````. The icons in ````_includes/share.html```` do not need to be edited unless you want to remove a certain website; however, the ones in ````_includes/social.html```` do have to be changed. You can follow the example that has been provided in ````_config.yml```` for you to link to all of your social media accounts  (see [Update Settings](#update-settings)). The naming convention has not changed from the instructions provided on Font Awesome.
-
-### Disqus Comments
-Comments can be enabled on every blog post in a few steps steps. The first step is to register your website with [Disqus](https://disqus.com/). Disqus will provide you with a shortname that you need for the next step. Once you have that the second step is to replace the ````disqus```` variable in ````_config.yml```` (see [Update Settings](#update-settings)). The third step is to open ````_includes/disqus.html```` and remove all the instructions. The final step is to visit a blog post and verify that your comments are there.
-
-***
-
-### Deployment
-GitHub Pages [does not support]((https://help.github.com/articles/adding-jekyll-plugins-to-a-github-pages-site/)) custom plugins. The tag list and tag pagination are built using custom plugins. There are several options to avoid any errors while deploying to production.
-* Run ````bundle exec jekyll build```` or ````npm run build```` and manually add the contents of the ```_site``` folder to the ```gh-pages``` branch.
-* Link the repository to [Netlify](https://www.netlify.com/). Netlify will then rebuild the theme every time a commit is pushed to the repo.
-* Finish setting up the [s3-website](https://github.com/klaemo/s3-website) package that is already included in the theme. This would deploy the theme to AWS S3 when ```npm run deploy``` is run.
-
-### Source Code
-The source code is broken down to make finding what you need as easy as possible. Almost everything runs through ````gulpfile.js````, so you will need to run ````npm install```` on your command line before doing any additional development. You can then run ````gulp```` or ````npm run gulp```` to compile everything.
+Second, from V1.5, you can easily complete your comment configuration by just adding your **short name** into `_config.yml`:
 
 ```
-.
-├── _assets
-|   ├── js
-|       ├── components
-|       ├── vendor
-|       ├── _inits.js
-|       └── app.js
-|   └── scss
-|       ├── base
-|       ├── components
-|       ├── fonts
-|       ├── regions
-|       ├── tools
-|       ├── utils
-|       ├── vendor
-|       └── app.scss
-├── _includes
-|   ├── contact.html
-|   ├── disqus.html
-|   ├── footer.html
-|   ├── formcarry.html
-|   ├── head.html
-|   ├── header.html
-|   ├── navigation.html
-|   ├── pagination.html
-|   ├── post-card.html
-|   ├── share.html
-|   ├── social.html
-|   └── subscribe_form.html
-├── _layouts
-|   ├── compress.html
-|   ├── default.html
-|   ├── page.html
-|   ├── post.html
-|   └── tag.html
-├── _plugins
-├── _posts
-├── _site
-├── assets
-|   ├── css
-|   ├── images
-|   ├── js
-├── .eslintrc
-├── .gitignore
-├── .stylelintrc
-├── 404.html
-├── _config.yml
-├── Gemfile
-├── Gemfile.lock
-├── gulpfile.js
-├── index.html
-├── package.json
-├── README.md
-├── style-guidle.html
-└── subscribe.html
+duoshuo_username: _your_duoshuo_short_name_
+# OR
+disqus_username: _your_disqus_short_name_
 ```
 
-The CSS is written in Sass. The JavaScript is written in ES6, so your code is up to date with the newest standards.
+**To the old version user**, it's better that you pull the new version, otherwise you have to replace code in `post.html`, `keynote.html` and `about.html` by yourselves.
 
-### Donations
-Barber has been released for free. Similar themes cost around $29 on [ThemeForest](https://themeforest.net/category/static-site-generators/jekyll). Any donations would be greatly appreciated after the work that went into releasing Barber.
+Furthermore, Duoshuo support Sharing. if you only wanna use Duoshuo comment without sharing, you can set `duoshuo_share: false`. You can use Duoshuo Sharing and Disqus Comments together also.
 
-* PayPal – <https://www.paypal.me/samesies>
-* Bitcoin – 1PSzNmcfAFJY1PtBK5u9R5bTGfF7KAuLcq
-* Ethereum – 0x392F7116e4171F1D740397B6000EadD2e4bb9670
-* Litecoin – LSH9AnjcUTV5T7PUxXQuxPqb9W5aSR9GEP
 
-### Support
-Email <okay@samesies.io> if you need any additional support with Barber.
+
+#### Analytics
+
+From V1.5, we support Google Analytics and Baidu Tongji officially with a deathly simple config:
+
+```
+# Baidu Analytics
+ba_track_id: 4cc1f2d8f3067386cc5cdb626a202900
+
+# Google Analytics
+ga_track_id: 'UA-49627206-1'            # Format: UA-xxxxxx-xx
+ga_domain: huangxuan.me
+```
+
+Just checkout the code offered by Google/Baidu, and copy paste here, all the rest is already done for you.
+
+(Google might ask for meta tag "google-site-verification")
+
+
+#### Customization
+
+If you wanna do more customization and change code yourself, a [Grunt](gruntjs.com) environment is also included. (Thanks to Clean Blog.)
+
+There are a number of tasks it performs like minification of the JavaScript, compiling of the LESS files, adding banners to keep the Apache 2.0 license intact, and watching for changes. Run the grunt default task by entering `grunt ` into your command line which will build the files. You can use `grunt watch` if you are working on the JavaScript or the LESS.
+
+**Try to understand code in `_include/` and `_layouts/`, then you can modify Jekyll [Liquid](https://github.com/Shopify/liquid/wiki) template directly to do more creative customization.**
+
+
+#### Header Image
+
+Change header images of any pages or any posts is pretty easy as mentioned above. But, thanks to [issue #6 (in Chinese)](https://github.com/Huxpro/huxpro.github.io/issues/6) asked, **how to make it looks great?**
+
+**Well...it is actually a design issue**, not a coding stuff. It is better that you have basic design knowledge, but not is ok, let me told you how to make it well-designed:
+
+Seeing the title text above image is **white**, the image should be **dark** to emphasize the contract. so we can easily add a **black overlay with fews of opacity**, which is depends on the brightness of the original images you used. you can process it in Photoshop, Sketch etc.
+
+In technical views, it can be done with CSS. However, the opacity of the black overlay is really hard to assigned, **every image has different brightness so the  degree it should be adjusted is different so it is impossible to hard code it.**
+
+
+#### SEO Title
+
+Before V1.4, site setting `title` is not only used for displayed in Home Page and Navbar, but also used to generate the `<title>` in HTML.
+It's possible that you want the two things different. For me, my site-title is **“Hux Blog”** but I want the title shows in search engine is **“黄玄的博客 | Hux Blog”** which is multi-language.
+
+So, the SEO Title is introduced to solve this problem, you can set `SEOTitle` different from `title`, and it would be only used to generate HTML `<title>` and setting DuoShuo Sharing.
+
+#### Page Build Warning
+
+There are many possible reasons to cause a "Page Build Warning" email or similar error.
+
+One of these is that github changes its build environment.
+
+> You are attempting to use the 'pygments' highlighter, which is currently unsupported on GitHub Pages. Your site will use 'rouge' for highlighting instead. To suppress this warning, change the 'highlighter' value to 'rouge' in your '_config.yml'.
+
+So, just edit `_config.yml`, find `highlighter: pygments`, change it to `highlighter: rouge` and the warning will be gone.
+
+For other circumstances, check out existing issues or create a new one!
+
+## License
+
+Apache License 2.0.
+Copyright (c) 2015-2016 Huxpro
+
+Hux Blog is derived from [Clean Blog Jekyll Theme (MIT License)](https://github.com/BlackrockDigital/startbootstrap-clean-blog-jekyll/)
+Copyright (c) 2013-2016 Blackrock Digital LLC.

@@ -1,0 +1,101 @@
+---
+layout:     post
+title:      "设计模式(2)——观察者模式"
+subtitle:   ""
+date:       2017-07-20 22:00:02
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 设计模式
+    - 读书笔记
+---
+
+**观察者（Observer）模式**定义了对象之间的一对多依赖，这样一来，当一个对象改变状态时，它的所有依赖者都会收到通知并自动更新。
+
+观察者模式的原理有点类似报纸和杂志的订阅。
+1. 报社的业务就是出版报纸
+2. 向某家报社订阅报纸，只要他们有新报纸出版，就会给你送来。只要你是他们的订户，你就会一直收到新报纸。
+3. 当你不想再看报纸的时候，取消订阅，他们就不会再送新报纸来。
+4. 只要报社还在运营，就会一直有人（或单位）向他们订阅报纸或取消订阅报纸。
+
+其中出版者就相当于观察者模式中的主题（被观察者），订阅者就是观察者。
+
+下面用一个实例来进一步解释观察者模式。我们用代码模拟了一个气象观测站系统，此系统中三个部分是气象站（获取实际气象数据的物理装置）、WeatherData对象（追踪来自气象站的数据，并更新布告板）和布告板（显示目前天气状况给用户看）。使用Java内置的观察者模式API实现，其中WeatherData类就是被观察者，它扩展自`java.util.Observable`类
+```java
+import java.util.Observable;
+
+/**
+ * Created by CrowHawk on 17/7/9.
+ */
+public class WeatherData extends Observable {
+    private float temperature;
+    private float humidity;
+    private float pressure;
+
+    public WeatherData() {}
+
+    public void measurementsChanged() {
+        setChanged();
+        notifyObservers();
+    }
+
+    public void setMeasurements (float temperature, float humidity, float pressure) {
+        this.temperature = temperature;
+        this.humidity = humidity;
+        this.pressure = pressure;
+        measurementsChanged();
+    }
+
+    public float getTemperature() {
+        return temperature;
+    }
+
+    public float getHumidity() {
+        return humidity;
+    }
+
+    public float getPressure() {
+        return pressure;
+    }
+}
+```
+而布告板是观察者，它实现了`java.util.Observer`接口。
+```java
+import java.util.Observable;
+import java.util.Observer;
+
+/**
+ * Created by CrowHawk on 17/7/9.
+ */
+public class CurrentConditionsDisplay implements Observer,DisplayElement{
+    Observable observable;
+    private float temperature;
+    private float humidity;
+
+    public CurrentConditionsDisplay(Observable observable) {
+        this.observable = observable;
+        observable.addObserver(this);
+    }
+
+    public void update(Observable obs, Object arg) {
+        if(obs instanceof WeatherData) {
+            WeatherData weatherData = (WeatherData)obs;
+            this.temperature = weatherData.getTemperature();
+            this.humidity = weatherData.getHumidity();
+            display();
+        }
+    }
+
+    public void display() {
+        System.out.println("Current conditions: " + temperature + "F degrees and " + humidity + "% humidity");
+    }
+}
+```
+这里是[完整示例代码](https://github.com/CrowHawk/DesignPattern-Learning/tree/master/Observer/src)。
+
+观察者模式类图如下
+![](http://pic.yupoo.com/crowhawk/GBC7Jr9z/13c6IN.jpg)
+
+观察者模式体现了第四个设计原则：**为了交互对象之间的松耦合设计而努力**。我们可以独立地复用主题和观察者，改变主题或观察者其中的一方，并不会影响另一方。因为两者是松耦合的，所以只要他们之间的接口仍被遵守，我们就可以自由地改变他们。松耦合的设计之所以能让我们建立有弹性的OO系统，能够应对变化，是因为对象之间的相互依赖性降到了最低。

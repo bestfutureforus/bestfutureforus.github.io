@@ -1,0 +1,248 @@
+---
+layout:     post
+title:      "MyBatis学习笔记(7)——动态SQL"
+subtitle:   ""
+date:       2017-03-23 22:00:00
+author:     "Crow"
+#header-img: "img/post-bg-nextgen-web-pwa.jpg"
+header-mask: 0.3
+catalog:    true
+tags:
+    - 框架
+---
+
+**动态SQL**是MyBatis最核心的功能和最强大的特性之一，在使用原生JDBC进行连接数据库时，若要完成SQL语句拼接，程序员需要小心翼翼地完成代码，非常不方便，而MyBatis基于OGNL表达式的动态SQL机制，对SQL语句进行灵活操作，通过表达式进行判断，对SQL进行灵活拼接、组装。
+
+总体说来mybatis 动态SQL 语句主要有以下几类:
+1. if 语句 (简单的条件判断)
+2. where (主要是用来简化sql语句中where条件判断的，能智能的处理 and or ,不必担心多余导致语法错误)
+3. foreach (在实现 mybatis in 语句查询时特别有用)
+4. choose (when,otherwize) ,相当于java 语言中的 switch ,与 jstl 中的choose 很类似.
+5. trim (对包含的内容加上 prefix,或者 suffix 等，前缀，后缀)
+6. set (主要用于更新时)
+
+其中前三个是最常用的，本文也主要介绍这三种语句。
+
+## If语句
+
+在UserMapper.xml文件中作如下配置
+```xml
+<!-- 传递pojo综合查询用户信息 -->
+	<select id="findUserList" parameterType="user" resultType="user">
+		select * from user 
+		where 1=1 
+		<if test="id!=null and id!=''">
+		and id=#{id}
+		</if>
+		<if test="username!=null and username!=''">
+		and username like '%${username}%'
+		</if>
+	</select>
+```
+即完成了空字符串校验
+
+## Where
+
+可用来简化上文程序中的`and`，将上文程序改为
+```xml
+<select id="findUserList" parameterType="user" resultType="user">
+		select * from user 
+		<where>
+		<if test="id!=null and id!=''">
+		and id=#{id}
+		</if>
+		<if test="username!=null and username!=''">
+		and username like '%${username}%'
+		</if>
+		</where>
+	</select>
+```
+`<where>`可以自动处理第一个and
+
+## 实例代码
+
+下面在UserMapper.xml中将`If`和`Where`整合，用动态SQL实现之前的文章中实现的用户信息综合查询功能
+
+### UserMapper.xml
+
+```xml
+<!-- 用户信息综合查询
+    #{userCustom.sex}:取出pojo包装对象中性别值
+    ${userCustom.username}：取出pojo包装对象中用户名称
+ -->
+<select id="findUserList" parameterType="com.iot.mybatis.po.UserQueryVo"
+        resultType="com.iot.mybatis.po.UserCustom">
+    SELECT * FROM user
+    <!--  where 可以自动去掉条件中的第一个and -->
+    <where>
+        <if test="userCustom!=null">
+            <if test="userCustom.sex!=null and userCustom.sex != '' ">
+               AND user.sex=#{userCustom.sex}
+            </if>
+            <if test="userCustom.username!=null and userCustom.username != '' ">
+               AND user.username LIKE '%${userCustom.username}%'
+            </if>
+        </if>
+    </where>
+</select>
+```
+
+### 测试代码
+
+```java
+@Test
+    public void testFindUserList() throws Exception {
+
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+
+        //创建UserMapper对象，mybatis自动生成mapper代理对象
+        UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+
+        //创建包装对象，设置查询条件
+        UserQueryVo userQueryVo = new UserQueryVo();
+        UserCustom userCustom = new UserCustom();
+        //由于这里使用动态sql，如果不设置某个值，条件不会拼接在sql中
+//		userCustom.setSex("1");
+        userQueryVo.setUserCustom(userCustom);
+        //调用userMapper的方法
+
+        List<UserCustom> list = userMapper.findUserList(userQueryVo);
+
+        System.out.println(list);
+    }
+```
+
+运行结果为
+![](http://pic.yupoo.com/crowhawk/GjIsCRMu/9b4xs.jpg)
+可以看出，当没有传入username时，SQL语句变为`SELECT * FROM user WHERE user.sex=?`，这是进行了if判断的结果。
+
+## SQL片段
+
+我们有时会在写动态SQL语句时遇到代码可复用的情况，为了避免写大量重复代码，可以将动态SQL判断代码块抽取出来（注意不要包括`Where`），组成SQL代码块，其它的statement中就可以引用sql片段，方便代码复用。
+
+### 定义sql片段
+
+```xml
+<!-- 定义sql片段
+id：sql片段的唯一标识
+经验：是基于单表来定义sql片段的，这样的话这个sql片段的可复用性才高
+在sql片段中不要包括 where
+ -->
+<sql id="query_user_where">
+    <if test="userCustom!=null">
+        <if test="userCustom.sex!=null and userCustom.sex!=''">
+            AND user.sex = #{userCustom.sex}
+        </if>
+        <if test="userCustom.username!=null and userCustom.username!=''">
+            AND user.username LIKE '%${userCustom.username}%'
+        </if>
+    </if>
+</sql>
+```
+
+### 引用sql片段
+
+```xml
+<!-- 用户信息综合查询
+    #{userCustom.sex}:取出pojo包装对象中性别值
+    ${userCustom.username}：取出pojo包装对象中用户名称
+ -->
+<select id="findUserList" parameterType="com.iot.mybatis.po.UserQueryVo"
+        resultType="com.iot.mybatis.po.UserCustom">
+    SELECT * FROM user
+    <!--  where 可以自动去掉条件中的第一个and -->
+    <where>
+        <!-- 引用sql片段 的id，如果refid指定的id不在本mapper文件中，需要前边加namespace -->
+        <include refid="query_user_where"></include>
+        <!-- 在这里还要引用其它的sql片段  -->
+    </where>
+</select>
+```
+
+## foreach
+
+有时我们需要向SQL语句传递数组或List，这时候MyBatis会提供一个foreach标签来解析数组和List。
+例如，我们需要在用户查询列表和查询总数的statement中增加多个id输入查询，我们采用如下SQL语句：
+```sql
+SELECT * FROM USER WHERE id=1 OR id=10 OR id=16
+```
+为此我们需要在输入参数类型中添加`List<Integer> ids`传入多个id
+
++ 在`UserQueryVo`包装类中加入如下属性
+```java
+private List<Integer> ids;
+```
+
++ 修改UserMapper.xml文件
+
+```xml
+<sql id="query_user_where">
+        <if test="userCustom!=null">
+            <if test="userCustom.sex!=null and userCustom.sex!=''">
+                and user.sex = #{userCustom.sex}
+            </if>
+            <if test="userCustom.username!=null and userCustom.username!=''">
+                and user.username LIKE '%${userCustom.username}%'
+            </if>
+            <if test="ids!=null">
+                <!-- 使用 foreach遍历传入ids
+                collection：指定输入 对象中集合属性
+                item：每个遍历生成对象中
+                open：开始遍历时拼接的串
+                close：结束遍历时拼接的串
+                separator：遍历的两个对象中需要拼接的串
+                 -->
+                <!-- 使用实现下边的sql拼接：
+                 AND (id=1 OR id=10 OR id=16)
+                 -->
+                <foreach collection="ids" item="user_id" open="AND (" close=")" separator="or">
+                    <!-- 每个遍历需要拼接的串 -->
+                    id=#{user_id}
+                </foreach>
+
+                <!-- 实现  “ and id IN(1,10,16)”拼接 -->
+                <!-- <foreach collection="ids" item="user_id" open="and id IN(" close=")" separator=",">
+                    每个遍历需要拼接的串
+                    #{user_id}
+                </foreach> -->
+            </if>
+        </if>
+    </sql>
+```
+
++ 测试代码
+
+```java
+@Test
+    public void testFindUserList() throws Exception {
+
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+
+        //创建UserMapper对象，mybatis自动生成mapper代理对象
+        UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+
+        //创建包装对象，设置查询条件
+        UserQueryVo userQueryVo = new UserQueryVo();
+        UserCustom userCustom = new UserCustom();
+        //由于这里使用动态sql，如果不设置某个值，条件不会拼接在sql中
+//		userCustom.setSex("1");
+        userCustom.setUsername("小明");
+        //传入多个id
+        List<Integer> ids = new ArrayList<Integer>();
+        ids.add(1);
+        ids.add(10);
+        ids.add(16);
+        //将ids通过userQueryVo传入statement中
+        userQueryVo.setIds(ids);
+        userQueryVo.setUserCustom(userCustom);
+        //调用userMapper的方法
+
+        List<UserCustom> list = userMapper.findUserList(userQueryVo);
+
+        System.out.println(list);
+    }
+```
+
+运行结果如下
+
+![](http://pic.yupoo.com/crowhawk/GjIA0lZF/WT2QV.jpg)
