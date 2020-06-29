@@ -3,14 +3,14 @@ layout:     post
 title:      "MyBatis学习笔记(2)——MyBatis入门程序"
 subtitle:   ""
 date:       2017-03-23 12:00:00
-author:     "Crow"
+author:     "Benjamin"
 #header-img: "img/post-bg-nextgen-web-pwa.jpg"
 header-mask: 0.3
 catalog:    true
 tags:
     - 框架
 ---
- 
+
 **目标：**
 + 对于一个用户表,根据用户id（主键）查询用户信息
 

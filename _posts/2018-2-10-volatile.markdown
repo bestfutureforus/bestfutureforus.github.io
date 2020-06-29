@@ -3,7 +3,7 @@ layout:     post
 title:      "Java volatile 关键字底层实现原理解析"
 subtitle:   ""
 date:       2018-02-10 18:00:00
-author:     "Crow"
+author:     "Benjamin"
 #header-img: "img/post-bg-nextgen-web-pwa.jpg"
 header-mask: 0.3
 catalog:    true
