@@ -1,6 +1,6 @@
 ---
 layout: post
-title: HEXO进阶
+title: HEXO进阶迭代的
 tag: hexo
 ---
 
