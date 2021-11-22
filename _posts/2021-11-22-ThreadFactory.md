@@ -1,24 +1,14 @@
 
 
-
-
-
-
-
 ---
 layout: post
 title: "DefaultThreadFactory"
-date: 2021-10-15
+date: 2021-11-21
 description: "DefaultThreadFactory"
 tag: hexo
 ---   
 ## 介绍
 DefaultThreadFactory
-
-
-
-
-
 
         static class DefaultThreadFactory implements ThreadFactory {
         private static final AtomicInteger poolNumber = new AtomicInteger(1);
