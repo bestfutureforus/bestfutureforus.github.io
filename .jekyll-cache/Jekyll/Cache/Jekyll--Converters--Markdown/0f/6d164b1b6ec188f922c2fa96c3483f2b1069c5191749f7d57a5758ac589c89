@@ -1,0 +1,125 @@
+I"a<h2 id="简介">简介</h2>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Apache Flink是一个高性能的分布式流处理框架，并且实现了批处理。 Flink定义了窗口的概念，一个窗口即包含一定的数据段，支持4种窗口：
+
+时间窗口，窗口包含一定时间段中的所有数据，最简单也最有用的窗口，支持滑动（一次移动自定义的时间）和滚动（一次移动整个窗口大小的时间）。
+计数窗口，窗口包含特定数量的数据，但可能会因为没有数据来源而浪费资源。
+会话窗口，会话即活动，其时间不定，数据不定，可通过超时来关闭窗口。
+触发器，前3中窗口均包含特定的触发器，也可自定义触发器来实现专用的窗口，比如带超时的计数窗口。 在时间窗口中，关闭时通过数据流中的水印字段实现的，水印字段是有程序开发人员生成，而不是Flink本身，因为不同领域情况不一样。 ## Flink API
+
+对于数据流来说，核心数据结构为xxxStream, 比如DataStream, KeyedStream等。
+</code></pre></div></div>
+
+<h2 id="数据转换">数据转换</h2>
+
+<p>map - DataStream -&gt; DataStream 将数据流一对一的转换</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// 字符串(String) -&gt; 字符串长度(Integer)
+env.fromElements("name", "mark").map(value -&gt; {
+return value.length();
+});
+</code></pre></div></div>
+
+<p>flatMap - DataStream -&gt; DataStream 数据流一对多转换</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// 字符串(String) -&gt; 字符串(String)
+env.fromElements("name,mark,test").map((v, c) -&gt; {
+for (String str : v.split(",")) {
+c.collect(str);
+}
+}).returns(String.class)
+});
+</code></pre></div></div>
+
+<p>flater - DataStream -&gt; DataStream 数据流过滤</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// 返回false即被过滤。
+dataStream.flater(v -&gt; {
+if (...) {
+return true;
+} else {
+return false;
+}
+})
+});
+</code></pre></div></div>
+
+<p>keyBy - DataStream -&gt; KeyedStream 数据分类，安装特定的规则将数据进行分类，然后使用reduce、sum、mix、min等进行聚合</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// 按Name字段分类， 在统计val总和。
+dataStream.keyBy(v -&gt; {
+return v.Name;
+}).reduce((v1, v2) -&gt; {
+return v1.val + v2.val;
+})
+});
+</code></pre></div></div>
+
+<p>process - KeyedStream -&gt; SingleOutputStreamOperator 将按照Key分组后的数据流转换为单输出流，核心是通过一个KeyedProcessFunction来进行处理。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// K - 分组的key的类型
+// V - 入数据流实际类型
+// O - 出数据流实际类型
+new KeyedProcessFunction&lt;K,V,O&gt;() {
+// 数据流的状态，每一个分组的Key映射一个value，可以根据使用state.value()获取到对应的状态。
+ValueState&lt;I&gt; state;
+// 每次创建KeyedProcessFunction时调用，和并行度有关，每个线程创建一个。
+// 可以用于创建比较费资源、可复用的的对象。
+@Override
+public void open(Configuration parameters) throws Exception {
+// 初始化状态
+ValueStateDescriptor&lt;String&gt; desc = new ValueStateDescriptor&lt;&gt;("state-name", I.class);
+RuntimeContext rCtx = getRuntimeContext();
+state = rCtx.getState(desc);
+super.open(parameters);
+}
+@Override
+public void processElement(V value, Context ctx, Collector&lt;O&gt;&gt; out) throws Exception {
+// 从RuntimeContext获取currentKey，在根据currentKey获取对应的Value。
+String stateValue = state.value();
+// stateValue 为 null 或者 默认值，则为该分组的第一个
+// 否则需要根据自定义逻辑判断
+// TODO Process
+}
+// 销毁时关闭，可用于关闭链接等。
+@Override
+public void close() {
+}
+}
+</code></pre></div></div>
+
+<h2 id="连接kafka">连接kafka</h2>
+<p>pom依赖，</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kafka 依赖
+
+&lt;dependency&gt;
+    &lt;groupId&gt;org.apache.flink&lt;/groupId&gt;
+    &lt;artifactId&gt;flink-core&lt;/artifactId&gt;
+    &lt;!-- 本机调试使用这个 --&gt;
+    &lt;!-- &lt;scope&gt;compile&lt;/scope&gt; --&gt;
+    &lt;scope&gt;provided&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;org.apache.flink&lt;/groupId&gt;
+    &lt;artifactId&gt;flink-streaming-java_2.11&lt;/artifactId&gt;
+    &lt;version&gt;1.9.0&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre></div></div>
+
+<p>args由实时计算平台运行时传入</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public static void kafka2Flink(String[] args) throws Exception {
+    final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    env.setRestartStrategy(new RestartStrategies.NoRestartStrategyConfiguration());
+    FlinkkafkaConsumer.Builder&lt;String&gt; cBuilder = FlinkkafkaConsumer.newBuilder();
+    cBuilder.consumerGroup(TOPIC, SUB_GROUP, NAMESPACE, APPKEY)
+            .setRtProperties(args)
+            .startFromLatest() // 
+            .deserializationSchema(new kafkaSimpleStringSchema());
+    FlinkkafkaConsumer consumer = cBuilder.build();
+    DataStream&lt;String&gt; source = env.addSource(consumer).shuffle();
+    // process chain
+    source.print();
+    env.execute(); }
+</code></pre></div></div>
+:ET
