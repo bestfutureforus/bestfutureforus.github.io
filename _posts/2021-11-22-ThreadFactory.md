@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "DefaultThreadFactory"
+title: "ThreadFactory"
 date: 2021-11-21
 description: "DefaultThreadFactory"
 tag: hexo
