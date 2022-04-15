@@ -1,0 +1,211 @@
+I"�<h2 id="介绍">介绍</h2>
+<p>以下为sftp常用工具类</p>
+
+<h2 id="sftp_helper">SFTP_HELPER</h2>
+<p>helper工具类</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@Slf4j
+public class SftpHelper {
+    /**
+     * host
+     */
+    private final String host;
+    /**
+     * 端口
+     */
+    private final int port;
+    /**
+     * 用户名称
+     */
+    private final String username;
+    /**
+     * 密码
+     */
+    private final String password;
+    /**
+     * 本地存储路径
+     */
+    @Value("${local.file.path}")
+    private String localFilePath;
+    public SftpHelper(String host, int port, String username, String password) {
+        this.host = host;
+        this.port = port;
+        this.username = username;
+        this.password = password;
+    }
+
+    /**
+     * @param remoteDir 远程文件夹
+     * @param fileName  文件名称
+     */
+    public void download(String remoteDir, String fileName, String localDir) throws JSchException, InterruptedException {
+        SftpUtils sftpUtil = new SftpUtils();
+        ChannelSftp sftp = sftpUtil.connect(host, port, username, password);
+        try {
+            sftpUtil.download(sftp, remoteDir, fileName, localDir);
+        } catch (Exception e) {
+            log.error("文件下载失败，1秒后重试一次，remoteDir={}, fileName={}，error={}", remoteDir, fileName, e.getMessage(), e);
+            Thread.sleep(1000);
+            try {
+                sftpUtil.download(sftp, remoteDir, fileName, localDir);
+            } catch (Exception e1) {
+                log.error("文件下载失败，重试1次依旧失败，remoteDir={}, fileName={}，error={}", remoteDir, fileName, e1.getMessage(), e1);
+            }
+        }
+        sftpUtil.logout();
+        String fileZipLocalAddress = localDir + "/" + fileName;
+        // 本地存储zip全路径
+        try {
+            if (new File(fileZipLocalAddress).exists()) {
+                // TODO 为空，则一直告警
+                UnzipUtils.unzip(fileZipLocalAddress, localDir);
+                return;
+            }
+            log.warn("unzip.error, zip.not.exists");
+        } catch (IOException e) {
+            log.error("unzip.error", e);
+        }
+    }
+
+    /**
+     * 删除本地tmp dir
+     *
+     * @param localDir 本地文件
+     */
+    public void deleteDir(String localDir) {
+        try {
+            File workDirFile = new File(localDir);
+            if (workDirFile.exists()) {
+                FileUtils.deleteDirectory(workDirFile);
+            }
+        } catch (Exception e) {
+            log.error("deleteDirectory.error, dir:{}", localDir, e);
+        }
+    }
+
+    /**
+     * 创建临时文件夹
+     *
+     * @return 临时文件夹路径
+     * @throws Exception 异常
+     */
+    public String createTmpDir(String tmpDirName) throws Exception {
+        File localDir = new File(localFilePath + tmpDirName);
+        int maxRetry = 3;
+        while (localDir.exists() &amp;&amp; maxRetry &gt; 0) {
+            TimeUnit.MILLISECONDS.sleep(10);
+            localDir = new File(localFilePath + tmpDirName + maxRetry);
+            maxRetry--;
+        }
+        if (localDir.exists()) {
+            throw new RuntimeException("localDir " + "【" + localDir + "】" + "exist");
+        }
+        Files.createDirectories(Paths.get(localDir.getAbsolutePath()));
+        log.info("localDir本地临时文件夹 : {}", localDir);
+        return localDir.toString();
+    }
+
+    /**
+     * 获取远程目录下文件集合
+     *
+     * @param remotePath 远程文件路径
+     * @return 文件集合
+     */
+    public List&lt;String&gt; ls(String remotePath) {
+        SftpUtils sftpUtil = new SftpUtils();
+        List&lt;String&gt; files = Lists.newArrayList();
+        try {
+            ChannelSftp sftp = sftpUtil.connect(host, port, username, password);
+            @SuppressWarnings("unchecked")
+            List&lt;ChannelSftp.LsEntry&gt; lsEntryList = Lists.newArrayList(sftp.ls(remotePath));
+            for (ChannelSftp.LsEntry lse : lsEntryList) {
+                files.add(lse.getFilename());
+            }
+        } catch (Exception e) {
+            log.warn("获取远程目录下文件集合失败", e);
+        } finally {
+            sftpUtil.logout();
+        }
+        return files;
+    }
+</code></pre></div></div>
+
+<p>　</p>
+
+<h2 id="sftp_util">SFTP_UTIL</h2>
+<p>sftpUtil底层连接</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class SftpUtils {
+    private ChannelSftp channel;
+
+    private Session session;
+
+    /**
+     * 创建连接
+     *
+     * @return channel链接
+     * @throws JSchException JSchException异常
+     */
+    public ChannelSftp connect(String host, int port, String username, String password) throws JSchException {
+        JSch jsch = new JSch();
+        session = jsch.getSession(username, host, port);
+        session.setPassword(password);
+
+        Properties config = new Properties();
+        //跳过公钥检查
+        config.setProperty("StrictHostKeyChecking", "no");
+        session.setConfig(config);
+
+        session.connect(10000);
+        channel = (ChannelSftp) session.openChannel("sftp");
+        channel.connect(100000);
+        return channel;
+    }
+
+    /**
+     * 关闭连接 server
+     */
+    public void logout() {
+        if (channel != null &amp;&amp; channel.isConnected()) {
+            channel.disconnect();
+        }
+        if (session != null &amp;&amp; session.isConnected()) {
+            session.disconnect();
+        }
+    }
+    
+    
+    /**
+     * 上传文件
+     * @param sftp
+     * @param remoteDir
+     * @param file
+     * @throws Exception
+     */
+    public  void upload(ChannelSftp sftp, String remoteDir, File file) throws Exception{
+        sftp.cd(remoteDir);
+        InputStream inputStream = new FileInputStream(file);
+        sftp.put(inputStream,file.getName());
+    }
+    
+
+    /**
+     * 下载文件
+     *
+     * @param sftp sftp
+     * @param remoteDir 远程文件
+     * @param fileName 文件名称
+     * @param localDir 本地文件
+     * @throws SftpException sftp异常
+     * @throws FileNotFoundException 文件未发现异常
+     */
+    public void download(ChannelSftp sftp, String remoteDir, String fileName, String localDir) throws SftpException, FileNotFoundException {
+        String dir = localDir + "//" + fileName;
+        sftp.cd(remoteDir);
+        File file = new File(dir);
+        sftp.get(fileName, new FileOutputStream(file));
+    }  
+}
+</code></pre></div></div>
+
+:ET
