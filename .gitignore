@@ -4,6 +4,7 @@
 ### Eclipse template
 *.pydevproject
 .metadata
+_site
 .jekyll-cache
 .gradle
 bin/
