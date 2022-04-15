@@ -1,4 +1,0 @@
-I"R<h2 id="简介">简介</h2>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Apache Flink是一个高性能的分布式流处理框架，并且实现了批处理。 Flink定义了窗口的概念，一个窗口即包含一定的数据段，支持4种窗口：
-</code></pre></div></div>
-:ET
